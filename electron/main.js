@@ -28,6 +28,10 @@ let telemetryReceived = false;
 let apiKey = '';
 let modelName = 'gemini-3.1-flash-lite';
 let pendingChanges = [];
+
+// Token tracking
+let globalTokens = { input: 0, output: 0 };
+let sessionTokens = { input: 0, output: 0 };
 let currentVehicleId = null;
 let telemetryWindowMinutes = 5; // configurable via settings
 
@@ -342,6 +346,7 @@ async function processAgentMessage() {
     const response = await chatSession.sendMessage({
       message: JSON.stringify(contextPayload),
     });
+    trackTokenUsage(response);
     handleAIResponse(response.text);
   } catch (e) {
     console.error('[Gemini] Agent message error:', e.message);
@@ -355,6 +360,45 @@ function sendToBackend(type, data) {
 }
 
 // ============ Gemini AI Integration ============
+
+function trackTokenUsage(response) {
+  const usage = response?.usageMetadata;
+  if (!usage) return;
+  const input = usage.promptTokenCount || 0;
+  const output = usage.candidatesTokenCount || 0;
+  globalTokens.input += input;
+  globalTokens.output += output;
+  sessionTokens.input += input;
+  sessionTokens.output += output;
+  // Persist global tokens to disk
+  try {
+    const tokensPath = path.join(app.getPath('userData'), 'token_usage.json');
+    fs.writeFileSync(tokensPath, JSON.stringify(globalTokens), 'utf-8');
+  } catch {}
+  // Notify UI
+  if (mainWindow) {
+    mainWindow.webContents.send('token-usage', {
+      global: globalTokens,
+      session: sessionTokens,
+      last: { input, output },
+    });
+  }
+}
+
+function loadGlobalTokens() {
+  try {
+    const tokensPath = path.join(app.getPath('userData'), 'token_usage.json');
+    if (fs.existsSync(tokensPath)) {
+      const data = JSON.parse(fs.readFileSync(tokensPath, 'utf-8'));
+      globalTokens.input = data.input || 0;
+      globalTokens.output = data.output || 0;
+    }
+  } catch {}
+}
+
+function resetSessionTokens() {
+  sessionTokens = { input: 0, output: 0 };
+}
 
 function initializeGenAI(key, model) {
   apiKey = key;
@@ -545,6 +589,7 @@ async function processUserMessage(userText, images) {
     if (mainWindow) {
       mainWindow.webContents.send('ai-thinking', { thinking: false });
     }
+    trackTokenUsage(response);
     handleAIResponse(response.text);
   } catch (e) {
     if (thisRequestId !== aiRequestId) return; // Cancelled
@@ -808,6 +853,17 @@ ipcMain.handle('set-input-device', async (event, { deviceIndex }) => {
   return { success: true };
 });
 
+// ============ Token Usage ============
+
+ipcMain.handle('get-token-usage', async () => {
+  return { global: globalTokens, session: sessionTokens };
+});
+
+ipcMain.handle('reset-session-tokens', async () => {
+  resetSessionTokens();
+  return { success: true };
+});
+
 // ============ Auto-Update ============
 
 ipcMain.handle('get-app-version', async () => {
@@ -918,6 +974,7 @@ function stopBackend() {
 // ============ App Lifecycle ============
 
 app.whenReady().then(() => {
+  loadGlobalTokens();
   startBackend();
   createWindow();
   // Give backend a moment to start before connecting

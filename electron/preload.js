@@ -33,6 +33,13 @@ contextBridge.exposeInMainWorld('pitwall', {
   getInputDevices: () => ipcRenderer.invoke('get-input-devices'),
   setInputDevice: (deviceIndex) => ipcRenderer.invoke('set-input-device', { deviceIndex }),
   
+  // Token usage
+  getTokenUsage: () => ipcRenderer.invoke('get-token-usage'),
+  resetSessionTokens: () => ipcRenderer.invoke('reset-session-tokens'),
+  onTokenUsage: (callback) => {
+    ipcRenderer.on('token-usage', (event, data) => callback(data));
+  },
+  
   // Auto-update
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),

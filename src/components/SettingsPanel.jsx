@@ -41,6 +41,58 @@ const SHORTCUT_OPTIONS = [
   'Alt+H', 'Alt+Q', 'Alt+P',
 ];
 
+function formatTokenCount(n) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function TokenUsageDisplay() {
+  const [usage, setUsage] = useState({ global: { input: 0, output: 0 }, session: { input: 0, output: 0 } });
+
+  useEffect(() => {
+    if (window.pitwall?.getTokenUsage) {
+      window.pitwall.getTokenUsage().then(data => {
+        if (data) setUsage(data);
+      });
+    }
+    if (window.pitwall?.onTokenUsage) {
+      window.pitwall.onTokenUsage((data) => setUsage(data));
+    }
+    return () => {
+      if (window.pitwall) window.pitwall.removeAllListeners('token-usage');
+    };
+  }, []);
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-gray-800/40 rounded px-2.5 py-1.5">
+          <div className="text-[9px] text-gray-500 uppercase">This Session</div>
+          <div className="text-xs text-gray-200 tabular-nums mt-0.5">
+            <span className="text-pit-info">{formatTokenCount(usage.session.input)}</span>
+            <span className="text-gray-600 mx-1">in</span>
+            <span className="text-pit-accent">{formatTokenCount(usage.session.output)}</span>
+            <span className="text-gray-600 ml-1">out</span>
+          </div>
+        </div>
+        <div className="bg-gray-800/40 rounded px-2.5 py-1.5">
+          <div className="text-[9px] text-gray-500 uppercase">All Time</div>
+          <div className="text-xs text-gray-200 tabular-nums mt-0.5">
+            <span className="text-pit-info">{formatTokenCount(usage.global.input)}</span>
+            <span className="text-gray-600 mx-1">in</span>
+            <span className="text-pit-accent">{formatTokenCount(usage.global.output)}</span>
+            <span className="text-gray-600 ml-1">out</span>
+          </div>
+        </div>
+      </div>
+      <p className="text-[9px] text-gray-600">
+        Total: {formatTokenCount(usage.global.input + usage.global.output)} tokens used across all sessions.
+      </p>
+    </div>
+  );
+}
+
 function SettingsPanel({ onClose }) {
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('gemini-3.1-flash-lite');
@@ -349,6 +401,15 @@ function SettingsPanel({ onClose }) {
             Keys are stored locally and never sent to third parties.
           </p>
         </div>
+
+        {/* Token Usage */}
+        <section className="pt-3 border-t border-gray-800/50">
+          <h3 className="text-[10px] text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Cpu size={10} />
+            Token Usage
+          </h3>
+          <TokenUsageDisplay />
+        </section>
 
         {/* Version & Updates */}
         <section className="pt-3 border-t border-gray-800/50">

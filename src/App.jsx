@@ -102,6 +102,10 @@ function App() {
           : s
       ));
     }
+    // Reset session token counter
+    if (window.pitwall?.resetSessionTokens) {
+      window.pitwall.resetSessionTokens();
+    }
     // Load target session
     setActiveSessionId(sessionId);
     const target = sessions.find((s) => s.id === sessionId);
