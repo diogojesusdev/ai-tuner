@@ -22,6 +22,22 @@ let apiKey = '';
 let modelName = 'gemini-3.1-flash-lite';
 let pendingChanges = [];
 let currentVehicleId = null;
+let telemetryWindowMinutes = 5; // configurable via settings
+
+// Agent State Machine
+const AGENT_STATES = {
+  IDLE: 'IDLE',                    // No car detected, waiting
+  IDENTIFY_CAR: 'IDENTIFY_CAR',   // New car detected, need name + discipline
+  COLLECTING_DATA: 'COLLECTING_DATA', // User driving, accumulating telemetry
+  READY: 'READY',                  // Enough data, can analyze
+  SUGGESTING: 'SUGGESTING',        // Proposed changes, waiting confirmation
+  UPDATING_TUNE: 'UPDATING_TUNE',  // Confirmed changes, asking for absolute values
+};
+
+let agentState = AGENT_STATES.IDLE;
+let carIdentified = false;
+let dataCollectionStart = null;
+let currentCarMemory = null;
 
 // Configurable shortcuts (defaults)
 let shortcuts = {
@@ -29,31 +45,57 @@ let shortcuts = {
   quit: 'CommandOrControl+Shift+Q',
 };
 
-const SYSTEM_PROMPT = `You are an elite, highly knowledgeable pit-lane race car engineer. Your goal is to optimize car setups based on live telemetry data and subjective driver feedback. You assist with all driving activities (drifting, grip racing, offroad, drag).
+const SYSTEM_PROMPT = `You are an elite pit-lane race car engineer operating in a structured workflow. You help optimize car setups using live telemetry and driver feedback across all disciplines (drifting, grip racing, offroad, drag).
 
-You do not know the exact slider values of the garage. You must offer **relative adjustments** (e.g., "Add 2 clicks of rear rebound damping", "Soften front springs by 0.1 Bar", "Increase rear toe-out by 0.1 degrees").
+## Your Workflow States
+You are given a "current_state" in every message. Follow the protocol for that state:
 
-You MUST reply strictly adhering to the following JSON schema:
+### IDENTIFY_CAR
+The system detected a new car (vehicle_id provided). Ask the driver to confirm the car name and what discipline they'll be driving. Keep it brief — they're in-game.
+
+### COLLECTING_DATA  
+The driver is actively driving to build up telemetry history. Acknowledge this, tell them you're watching, and let them know when you have enough data. You can answer brief questions but don't suggest tune changes yet.
+
+### READY
+You have sufficient telemetry data. You can now:
+- Proactively offer observations about the car's behavior
+- Wait for the driver to describe issues  
+- Suggest relative adjustments when asked
+
+### SUGGESTING
+You've proposed changes. Wait for the driver to confirm what they applied.
+
+### UPDATING_TUNE
+The driver confirmed they applied changes. Ask for the new absolute values so you can record them (e.g., "What's your rear tire pressure now?").
+
+## Response Format
+You MUST reply as JSON:
 {
-  "reply": "Your conversational explanation here",
+  "reply": "Your conversational message to the driver",
   "pending_changes": [
-    { "id": "unique-change-id", "action": "Description of the specific adjustment" }
+    { "id": "unique-id", "action": "Specific adjustment description" }
   ],
-  "tune_updates": {
-    "key": "new_value"
+  "tune_updates": { "field_key": "new_absolute_value" },
+  "next_state": "READY",
+  "user_input_request": {
+    "type": "car_identity | tune_values | confirmation | freeform",
+    "fields": ["field_name_1", "field_name_2"]
   }
 }
 
-Rules:
-- "reply" contains your natural language explanation of WHY you suggest these changes.
-- "pending_changes" is an array of specific, actionable tuning adjustments the driver should make.
-- Each change must have a unique "id" (use kebab-case like "rear-spring-soften") and a clear "action" string.
-- If you have no changes to suggest (just conversation), use an empty array for "pending_changes".
-- "tune_updates" is an optional object with tune field keys and their new absolute values AFTER the adjustment. Use these keys: tire_pressure_fl, tire_pressure_fr, tire_pressure_rl, tire_pressure_rr, camber_fl, camber_fr, camber_rl, camber_rr, toe_fl, toe_fr, toe_rl, toe_rr, spring_front, spring_rear, ride_height_front, ride_height_rear, bump_front, bump_rear, rebound_front, rebound_rear, arb_front, arb_rear, aero_front, aero_rear, brake_balance, brake_pressure, diff_accel, diff_decel, final_drive.
-- Only include tune_updates if the driver confirms they applied a change and tells you the new value, OR if you can compute the new absolute value from context.
-- If you don't know the absolute value, omit tune_updates entirely.
-- Always consider the telemetry data AND driver feedback together.
-- Reference specific telemetry values when explaining your reasoning.`;
+## Field Definitions
+- "reply": Natural language response (always required)
+- "pending_changes": Array of suggested adjustments (empty if none). Each has a unique "id" and "action" string.
+- "tune_updates": Object mapping tune keys to new absolute values. Only include when you KNOW the absolute value. Keys: tire_pressure_fl, tire_pressure_fr, tire_pressure_rl, tire_pressure_rr, camber_fl, camber_fr, camber_rl, camber_rr, toe_fl, toe_fr, toe_rl, toe_rr, spring_front, spring_rear, ride_height_front, ride_height_rear, bump_front, bump_rear, rebound_front, rebound_rear, arb_front, arb_rear, aero_front, aero_rear, brake_balance, brake_pressure, diff_accel, diff_decel, final_drive.
+- "next_state": Suggest what state the agent should transition to. Options: IDENTIFY_CAR, COLLECTING_DATA, READY, SUGGESTING, UPDATING_TUNE.
+- "user_input_request": When you need structured input from the user. "type" indicates what kind of data you need. "fields" lists the specific tune keys if requesting tune values.
+
+## Rules
+- You do NOT know exact slider values. Suggest RELATIVE adjustments ("add 2 clicks", "soften by 0.1 Bar").
+- Only transition to SUGGESTING when you actually have pending_changes.
+- Reference telemetry values when explaining reasoning.
+- Be concise — the driver is focused on the game.
+- If current tune values are empty/unknown, ask the user to provide their current settings before suggesting changes.`;
 
 function createWindow() {
   const isDev = !app.isPackaged;
@@ -142,7 +184,12 @@ function handleBackendMessage(msg) {
         mainWindow.webContents.send('telemetry-status', { receiving: true });
       }
       mainWindow.webContents.send('telemetry-update', msg.data);
-      currentVehicleId = msg.data.vehicle_id;
+      
+      // Detect car change → trigger state machine
+      if (msg.data.vehicle_id && msg.data.vehicle_id !== currentVehicleId) {
+        currentVehicleId = msg.data.vehicle_id;
+        onCarChanged(currentVehicleId);
+      }
       break;
 
     case 'VOICE_TRANSCRIPT':
@@ -156,7 +203,8 @@ function handleBackendMessage(msg) {
       break;
 
     case 'TELEMETRY_SUMMARY':
-      // Used internally for LLM context
+      // Stored for next LLM call
+      lastTelemetrySummary = msg.data;
       break;
 
     case 'CAR_MEMORY':
@@ -164,8 +212,84 @@ function handleBackendMessage(msg) {
         pendingTuneResolve(msg.data);
         pendingTuneResolve = null;
       }
+      currentCarMemory = msg.data;
       mainWindow.webContents.send('car-memory', msg.data);
       break;
+  }
+}
+
+let lastTelemetrySummary = {};
+
+// ============ Agent State Machine ============
+
+function setAgentState(newState) {
+  agentState = newState;
+  console.log(`[Agent] State → ${newState}`);
+  if (mainWindow) {
+    mainWindow.webContents.send('agent-state', { state: newState });
+  }
+}
+
+async function onCarChanged(vehicleId) {
+  console.log(`[Agent] Car changed to ID: ${vehicleId}`);
+  
+  // Load car memory from backend
+  currentCarMemory = null;
+  sendToBackend('GET_CAR_MEMORY', { vehicle_id: vehicleId });
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  if (currentCarMemory && currentCarMemory.car_name) {
+    // Car already identified — check if we have tune data
+    carIdentified = true;
+    dataCollectionStart = Date.now();
+    setAgentState(AGENT_STATES.COLLECTING_DATA);
+    
+    // Notify UI
+    if (mainWindow) {
+      mainWindow.webContents.send('ai-response', {
+        reply: `Recognized: ${currentCarMemory.car_name} (${currentCarMemory.discipline || 'unknown discipline'}). Drive for a bit so I can read your telemetry.`,
+        pending_changes: [],
+      });
+    }
+  } else {
+    // Unknown car — need identification
+    carIdentified = false;
+    setAgentState(AGENT_STATES.IDENTIFY_CAR);
+    
+    if (genaiClient && apiKey) {
+      // Ask LLM to prompt the user
+      processAgentMessage();
+    } else {
+      if (mainWindow) {
+        mainWindow.webContents.send('ai-response', {
+          reply: `New car detected (ID: ${vehicleId}). Tell me what car this is and what you'll be doing with it (drift, grip, etc).`,
+          pending_changes: [],
+        });
+      }
+    }
+  }
+}
+
+function checkDataCollectionComplete() {
+  if (agentState !== AGENT_STATES.COLLECTING_DATA) return false;
+  if (!dataCollectionStart) return false;
+  const elapsed = (Date.now() - dataCollectionStart) / 1000 / 60; // minutes
+  return elapsed >= telemetryWindowMinutes;
+}
+
+async function processAgentMessage() {
+  // Agent-initiated message (no user text) — used for state transitions
+  if (!genaiClient || !apiKey) return;
+  
+  const contextPayload = buildContextPayload(null);
+  
+  try {
+    const response = await chatSession.sendMessage({
+      message: JSON.stringify(contextPayload),
+    });
+    handleAIResponse(response.text);
+  } catch (e) {
+    console.error('[Gemini] Agent message error:', e.message);
   }
 }
 
@@ -179,7 +303,7 @@ function sendToBackend(type, data) {
 
 function initializeGenAI(key, model) {
   apiKey = key;
-  modelName = model || 'gemini-2.5-flash';
+  modelName = model || 'gemini-3.1-flash-lite';
   
   try {
     genaiClient = new GoogleGenAI({ apiKey });
@@ -198,6 +322,101 @@ function initializeGenAI(key, model) {
   }
 }
 
+function buildContextPayload(userText) {
+  // Check if we should auto-transition from COLLECTING_DATA to READY
+  if (checkDataCollectionComplete()) {
+    setAgentState(AGENT_STATES.READY);
+  }
+
+  const payload = {
+    current_state: agentState,
+    vehicle_id: currentVehicleId,
+    telemetry_window_minutes: telemetryWindowMinutes,
+  };
+
+  if (userText) {
+    payload.user_prompt = userText;
+  } else {
+    payload.system_trigger = true;
+  }
+
+  // Include telemetry summary if available
+  if (lastTelemetrySummary && Object.keys(lastTelemetrySummary).length > 0) {
+    payload.telemetry_summary = lastTelemetrySummary;
+  }
+
+  // Include car memory if available
+  if (currentCarMemory) {
+    payload.car_memory = {
+      car_name: currentCarMemory.car_name || null,
+      discipline: currentCarMemory.discipline || null,
+      tune: currentCarMemory.tune || {},
+      past_modifications: (currentCarMemory.past_modifications || []).slice(-10),
+    };
+  }
+
+  // Include data collection time remaining
+  if (agentState === AGENT_STATES.COLLECTING_DATA && dataCollectionStart) {
+    const elapsed = (Date.now() - dataCollectionStart) / 1000 / 60;
+    payload.data_collection_minutes_elapsed = Math.round(elapsed * 10) / 10;
+    payload.data_collection_minutes_target = telemetryWindowMinutes;
+  }
+
+  return payload;
+}
+
+function handleAIResponse(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    parsed = { reply: text, pending_changes: [] };
+  }
+
+  // Handle state transition suggested by LLM
+  if (parsed.next_state && AGENT_STATES[parsed.next_state]) {
+    setAgentState(parsed.next_state);
+  }
+
+  // Update pending changes state
+  if (parsed.pending_changes && parsed.pending_changes.length > 0) {
+    pendingChanges = parsed.pending_changes;
+    if (agentState !== AGENT_STATES.SUGGESTING) {
+      setAgentState(AGENT_STATES.SUGGESTING);
+    }
+  }
+
+  // If LLM provided tune updates, save and notify UI
+  if (parsed.tune_updates && Object.keys(parsed.tune_updates).length > 0) {
+    sendToBackend('UPDATE_CAR_MEMORY', {
+      vehicle_id: currentVehicleId,
+      updates: { tune: parsed.tune_updates },
+    });
+    if (mainWindow) {
+      mainWindow.webContents.send('tune-update', { tune: parsed.tune_updates });
+    }
+  }
+
+  // If LLM identified the car (user_input_request of type car_identity was fulfilled)
+  if (parsed.tune_updates && (parsed.tune_updates.car_name || parsed.tune_updates.discipline)) {
+    // Save car identity
+    const updates = {};
+    if (parsed.tune_updates.car_name) updates.car_name = parsed.tune_updates.car_name;
+    if (parsed.tune_updates.discipline) updates.discipline = parsed.tune_updates.discipline;
+    sendToBackend('UPDATE_CAR_MEMORY', { vehicle_id: currentVehicleId, updates });
+  }
+
+  // Send response to renderer
+  if (mainWindow) {
+    mainWindow.webContents.send('ai-response', parsed);
+  }
+
+  // Speak the reply via Python TTS
+  if (parsed.reply) {
+    sendToBackend('PLAY_AUDIO', { text: parsed.reply });
+  }
+}
+
 async function processUserMessage(userText) {
   if (!genaiClient || !apiKey) {
     if (mainWindow) {
@@ -209,62 +428,19 @@ async function processUserMessage(userText) {
     return;
   }
 
-  // Request telemetry summary from backend
-  let telemetrySummary = {};
+  // Request fresh telemetry summary
   if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
-    sendToBackend('GET_TELEMETRY_SUMMARY', {});
-    // Brief wait for summary (non-blocking approach would be better in production)
-    await new Promise(resolve => setTimeout(resolve, 100));
+    sendToBackend('GET_TELEMETRY_SUMMARY', { window_minutes: telemetryWindowMinutes });
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
 
-  // Build context payload
-  const contextPayload = {
-    user_prompt: userText,
-    telemetry_summary_30s: telemetrySummary,
-    car_history: {
-      vehicle_id: currentVehicleId,
-    },
-  };
+  const contextPayload = buildContextPayload(userText);
 
   try {
     const response = await chatSession.sendMessage({
       message: JSON.stringify(contextPayload),
     });
-
-    const text = response.text;
-    let parsed;
-
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      parsed = { reply: text, pending_changes: [] };
-    }
-
-    // Update pending changes state
-    if (parsed.pending_changes && parsed.pending_changes.length > 0) {
-      pendingChanges = parsed.pending_changes;
-    }
-
-    // If LLM provided tune updates, save and notify UI
-    if (parsed.tune_updates && Object.keys(parsed.tune_updates).length > 0) {
-      sendToBackend('UPDATE_CAR_MEMORY', {
-        vehicle_id: currentVehicleId,
-        updates: { tune: parsed.tune_updates },
-      });
-      if (mainWindow) {
-        mainWindow.webContents.send('tune-update', { tune: parsed.tune_updates });
-      }
-    }
-
-    // Send response to renderer
-    if (mainWindow) {
-      mainWindow.webContents.send('ai-response', parsed);
-    }
-
-    // Speak the reply via Python TTS
-    if (parsed.reply) {
-      sendToBackend('PLAY_AUDIO', { text: parsed.reply });
-    }
+    handleAIResponse(response.text);
   } catch (e) {
     console.error('[Gemini] Error:', e.message);
     if (mainWindow) {
@@ -297,6 +473,12 @@ ipcMain.handle('confirm-changes', async (event, { confirmedIds }) => {
     });
   }
   pendingChanges = pendingChanges.filter(c => !confirmedIds.includes(c.id));
+  
+  // Transition to UPDATING_TUNE if all changes confirmed
+  if (pendingChanges.length === 0) {
+    setAgentState(AGENT_STATES.UPDATING_TUNE);
+  }
+  
   return { remaining: pendingChanges };
 });
 
@@ -317,6 +499,15 @@ ipcMain.handle('set-shortcuts', async (event, { newShortcuts }) => {
 
 ipcMain.handle('get-shortcuts', async () => {
   return { shortcuts };
+});
+
+ipcMain.handle('set-telemetry-window', async (event, { minutes }) => {
+  telemetryWindowMinutes = minutes;
+  return { success: true };
+});
+
+ipcMain.handle('get-agent-state', async () => {
+  return { state: agentState };
 });
 
 ipcMain.handle('get-pending-changes', async () => {

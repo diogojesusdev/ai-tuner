@@ -41,7 +41,7 @@ class PitWallBackend:
 
         self.ws_clients: Set[WebSocketServerProtocol] = set()
         self.latest_telemetry: UniversalTelemetry | None = None
-        self.telemetry_history: collections.deque = collections.deque(maxlen=300)
+        self.telemetry_history: collections.deque = collections.deque(maxlen=6000)  # ~10min at 10Hz
         self.broadcast_rate = CONFIG["telemetry"]["broadcast_rate_hz"]
         self._running = False
         self._ptt_held = False
@@ -102,8 +102,9 @@ class PitWallBackend:
                     await self.tts.speak_async(text)
 
             elif msg_type == "GET_TELEMETRY_SUMMARY":
-                # Electron requests a 30s summary for LLM context
-                summary = self._get_telemetry_summary()
+                # Electron requests telemetry summary for LLM context
+                window_minutes = msg.get("data", {}).get("window_minutes", 5)
+                summary = self._get_telemetry_summary(window_minutes)
                 await websocket.send(json.dumps({
                     "type": "TELEMETRY_SUMMARY",
                     "data": summary
@@ -265,14 +266,14 @@ class PitWallBackend:
             except websockets.exceptions.ConnectionClosed:
                 pass
 
-    def _get_telemetry_summary(self) -> dict:
-        """Generate a 30-second telemetry summary for LLM context."""
+    def _get_telemetry_summary(self, window_minutes: int = 5) -> dict:
+        """Generate a telemetry summary for the last N minutes for LLM context."""
         if not self.telemetry_history:
             return {}
         
-        # Get last 30 seconds of data (at ~60Hz that's ~1800 frames,
-        # but we cap at deque maxlen of 300 which is ~30s at 10Hz broadcast)
-        recent = list(self.telemetry_history)
+        # Get last N minutes of data (at 10Hz broadcast)
+        frames_needed = window_minutes * 60 * 10
+        recent = list(self.telemetry_history)[-frames_needed:]
         if self.latest_telemetry:
             return self.latest_telemetry.summarize_30s(recent)
         return {}

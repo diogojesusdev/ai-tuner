@@ -35,25 +35,28 @@ const SHORTCUT_OPTIONS = [
 
 function SettingsPanel({ onClose }) {
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('gemini-2.5-flash');
+  const [model, setModel] = useState('gemini-3.1-flash-lite');
   const [pttKey, setPttKey] = useState('caps_lock');
   const [toggleOverlay, setToggleOverlay] = useState('F10');
   const [quitShortcut, setQuitShortcut] = useState('CommandOrControl+Shift+Q');
+  const [telemetryWindow, setTelemetryWindow] = useState(5);
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Load saved settings from localStorage
   useEffect(() => {
     const savedKey = localStorage.getItem('pitwall_api_key') || '';
-    const savedModel = localStorage.getItem('pitwall_model') || 'gemini-2.5-flash';
+    const savedModel = localStorage.getItem('pitwall_model') || 'gemini-3.1-flash-lite';
     const savedPtt = localStorage.getItem('pitwall_ptt_key') || 'caps_lock';
     const savedToggle = localStorage.getItem('pitwall_shortcut_toggle') || 'F10';
     const savedQuit = localStorage.getItem('pitwall_shortcut_quit') || 'CommandOrControl+Shift+Q';
+    const savedWindow = localStorage.getItem('pitwall_telemetry_window') || '5';
     setApiKey(savedKey);
     setModel(savedModel);
     setPttKey(savedPtt);
     setToggleOverlay(savedToggle);
     setQuitShortcut(savedQuit);
+    setTelemetryWindow(parseInt(savedWindow, 10));
   }, []);
 
   const handleSave = async () => {
@@ -71,6 +74,7 @@ function SettingsPanel({ onClose }) {
     localStorage.setItem('pitwall_ptt_key', pttKey);
     localStorage.setItem('pitwall_shortcut_toggle', toggleOverlay);
     localStorage.setItem('pitwall_shortcut_quit', quitShortcut);
+    localStorage.setItem('pitwall_telemetry_window', String(telemetryWindow));
 
     // Send to Electron main process
     if (window.pitwall) {
@@ -80,6 +84,7 @@ function SettingsPanel({ onClose }) {
         toggleOverlay,
         quit: quitShortcut,
       });
+      await window.pitwall.setTelemetryWindow(telemetryWindow);
       if (result.success) {
         setStatus('✓ Settings saved');
       } else {
@@ -163,6 +168,30 @@ function SettingsPanel({ onClose }) {
                 <option key={k.id} value={k.id}>{k.name}</option>
               ))}
             </select>
+          </div>
+        </section>
+
+        {/* Telemetry Analysis */}
+        <section>
+          <h3 className="text-[10px] text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Cpu size={10} />
+            Telemetry Analysis
+          </h3>
+          <div>
+            <label className="text-[10px] text-gray-400 mb-1 block">
+              Data collection window (minutes)
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="30"
+              value={telemetryWindow}
+              onChange={(e) => setTelemetryWindow(Math.max(1, Math.min(30, parseInt(e.target.value, 10) || 5)))}
+              className="w-full bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-pit-accent/50"
+            />
+            <p className="text-[9px] text-gray-600 mt-1">
+              How long to collect telemetry before the engineer starts analyzing.
+            </p>
           </div>
         </section>
 

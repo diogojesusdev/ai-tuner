@@ -5,6 +5,24 @@ import TuneSheet from './components/TuneSheet';
 import SettingsPanel from './components/SettingsPanel';
 import { Settings, GripVertical, MessageCircle, Wrench } from 'lucide-react';
 
+const STATE_LABELS = {
+  IDLE: { text: 'Idle', color: 'text-gray-500' },
+  IDENTIFY_CAR: { text: 'Identify Car', color: 'text-pit-info' },
+  COLLECTING_DATA: { text: 'Collecting...', color: 'text-pit-warn' },
+  READY: { text: 'Ready', color: 'text-pit-accent' },
+  SUGGESTING: { text: 'Suggesting', color: 'text-purple-400' },
+  UPDATING_TUNE: { text: 'Updating', color: 'text-pit-info' },
+};
+
+function AgentStatePill({ state }) {
+  const info = STATE_LABELS[state] || STATE_LABELS.IDLE;
+  return (
+    <span className={`text-[9px] px-1.5 py-0.5 rounded border border-gray-700/50 ${info.color}`}>
+      {info.text}
+    </span>
+  );
+}
+
 function App() {
   const [telemetry, setTelemetry] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -15,6 +33,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'tune'
   const [vehicleId, setVehicleId] = useState(null);
+  const [agentState, setAgentState] = useState('IDLE');
 
   // Auto-open settings if no API key is configured
   useEffect(() => {
@@ -67,6 +86,10 @@ function App() {
       setIsListening(data.listening);
     });
 
+    window.pitwall.onAgentState((data) => {
+      setAgentState(data.state);
+    });
+
     return () => {
       if (window.pitwall) {
         window.pitwall.removeAllListeners('telemetry-update');
@@ -75,6 +98,7 @@ function App() {
         window.pitwall.removeAllListeners('backend-status');
         window.pitwall.removeAllListeners('telemetry-status');
         window.pitwall.removeAllListeners('listening-state');
+        window.pitwall.removeAllListeners('agent-state');
       }
     };
   }, []);
@@ -118,8 +142,8 @@ function App() {
           {/* Telemetry HUD (compact speed/RPM bar) */}
           <TelemetryHUD telemetry={telemetry} telemetryActive={telemetryActive} />
 
-          {/* Tab navigation */}
-          <div className="flex border-b border-gray-800/50 px-2">
+          {/* Tab navigation + agent state */}
+          <div className="flex items-center border-b border-gray-800/50 px-2">
             <button
               onClick={() => setActiveTab('chat')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-b-2 transition-colors ${
@@ -142,6 +166,10 @@ function App() {
               <Wrench size={12} />
               Tune
             </button>
+            {/* Agent state pill */}
+            <div className="ml-auto">
+              <AgentStatePill state={agentState} />
+            </div>
           </div>
 
           {/* Tab content */}

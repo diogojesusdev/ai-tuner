@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('pitwall', {
   setPttKey: (key) => ipcRenderer.invoke('set-ptt-key', { key }),
   setShortcuts: (newShortcuts) => ipcRenderer.invoke('set-shortcuts', { newShortcuts }),
   getShortcuts: () => ipcRenderer.invoke('get-shortcuts'),
+  setTelemetryWindow: (minutes) => ipcRenderer.invoke('set-telemetry-window', { minutes }),
+  getAgentState: () => ipcRenderer.invoke('get-agent-state'),
   
   // Chat
   sendMessage: (text) => ipcRenderer.invoke('send-message', { text }),
@@ -45,6 +47,9 @@ contextBridge.exposeInMainWorld('pitwall', {
   },
   onTuneUpdate: (callback) => {
     ipcRenderer.on('tune-update', (event, data) => callback(data));
+  },
+  onAgentState: (callback) => {
+    ipcRenderer.on('agent-state', (event, data) => callback(data));
   },
 
   // Cleanup listeners
