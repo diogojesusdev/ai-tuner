@@ -118,6 +118,14 @@ function App() {
       setIsThinking(data.thinking);
     });
 
+    window.pitwall.onVoiceError((data) => {
+      // Show voice errors as system messages in chat so user knows what happened
+      setMessages((prev) => [
+        ...prev,
+        { role: 'system', text: `⚠️ ${data.error}`, timestamp: data.timestamp },
+      ]);
+    });
+
     window.pitwall.onAgentState((data) => {
       setAgentState(data.state);
     });
@@ -137,6 +145,7 @@ function App() {
         window.pitwall.removeAllListeners('telemetry-status');
         window.pitwall.removeAllListeners('listening-state');
         window.pitwall.removeAllListeners('ai-thinking');
+        window.pitwall.removeAllListeners('voice-error');
         window.pitwall.removeAllListeners('agent-state');
         window.pitwall.removeAllListeners('car-memory');
       }

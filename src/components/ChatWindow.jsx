@@ -104,6 +104,8 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
               className={`inline-block max-w-[85%] px-3 py-2 rounded-lg text-xs leading-relaxed ${
                 msg.role === 'user'
                   ? 'bg-pit-accent/10 text-pit-accent border border-pit-accent/20'
+                  : msg.role === 'system'
+                  ? 'bg-yellow-900/20 text-yellow-300/90 border border-yellow-700/30 italic'
                   : 'bg-gray-800/60 text-gray-200 border border-gray-700/30'
               }`}
             >

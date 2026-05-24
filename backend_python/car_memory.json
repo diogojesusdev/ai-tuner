@@ -4,8 +4,11 @@
       "discipline": "drifting",
       "past_modifications": [],
       "tune": {
-        "discipline": "drifting"
-      }
+        "discipline": "drifting",
+        "car_name": "Toyota Supra MK5",
+        "hp_tier": "low"
+      },
+      "car_name": "Toyota Supra MK5"
     }
   }
 }

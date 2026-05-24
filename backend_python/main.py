@@ -264,12 +264,31 @@ class AITunerBackend:
 
     async def _process_voice(self):
         """Process recorded voice input and broadcast transcript."""
-        text = await self.stt.transcribe_async()
-        if text:
+        result = await self.stt.transcribe_async()
+
+        if result.success:
             # Broadcast voice transcript to Electron
             message = json.dumps({
                 "type": "VOICE_TRANSCRIPT",
-                "data": {"text": text, "timestamp": time.time()}
+                "data": {"text": result.text, "timestamp": time.time()}
+            })
+            for client in self.ws_clients.copy():
+                try:
+                    await client.send(message)
+                except websockets.exceptions.ConnectionClosed:
+                    pass
+        else:
+            # Send error/status feedback to Electron so user knows what happened
+            error_msg = result.error or "No speech detected"
+            print(f"[STT] Failed: {error_msg}")
+            message = json.dumps({
+                "type": "VOICE_ERROR",
+                "data": {
+                    "error": error_msg,
+                    "audio_duration": result.audio_duration,
+                    "audio_level": result.audio_level,
+                    "timestamp": time.time(),
+                }
             })
             for client in self.ws_clients.copy():
                 try:

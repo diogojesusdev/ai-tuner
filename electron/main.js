@@ -218,6 +218,12 @@ function handleBackendMessage(msg) {
       processUserMessage(msg.data.text);
       break;
 
+    case 'VOICE_ERROR':
+      // STT failed or produced no output — notify UI so user gets feedback
+      console.log('[STT] Error:', msg.data.error);
+      mainWindow.webContents.send('voice-error', msg.data);
+      break;
+
     case 'LISTENING_STATE':
       mainWindow.webContents.send('listening-state', msg.data);
       // If user starts speaking while AI is thinking, cancel the pending request

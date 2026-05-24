@@ -73,6 +73,9 @@ contextBridge.exposeInMainWorld('pitwall', {
   onAiThinking: (callback) => {
     ipcRenderer.on('ai-thinking', (event, data) => callback(data));
   },
+  onVoiceError: (callback) => {
+    ipcRenderer.on('voice-error', (event, data) => callback(data));
+  },
 
   // Cleanup listeners
   removeAllListeners: (channel) => {
