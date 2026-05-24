@@ -12,6 +12,10 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
   const [checkedChanges, setCheckedChanges] = useState(new Set());
   const messagesEndRef = useRef(null);
 
+  // Get the PTT key label for display
+  const pttKeyId = localStorage.getItem('pitwall_ptt_key') || 'caps_lock';
+  const pttLabel = pttKeyId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -84,7 +88,7 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.length === 0 && (
           <div className="text-center text-gray-600 text-xs mt-8">
-            <p>Hold CapsLock to talk to your engineer.</p>
+            <p>Hold <kbd className="px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded text-gray-400 text-[10px] font-mono">{pttLabel}</kbd> to talk to your engineer.</p>
             <p className="mt-1">Or type a message below.</p>
           </div>
         )}
@@ -189,25 +193,28 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
       )}
 
       {/* Input */}
-      <form
-        onSubmit={handleSubmit}
-        className="px-4 py-3 border-t border-gray-800/50 flex gap-2"
-      >
-        <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1 bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-pit-accent/50"
-        />
-        <button
-          type="submit"
-          disabled={!inputText.trim()}
-          className="p-1.5 rounded-md bg-pit-accent/20 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/30 disabled:opacity-30 transition-colors"
-        >
-          <Send size={14} />
-        </button>
-      </form>
+      <div className="px-4 py-3 border-t border-gray-800/50">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-pit-accent/50"
+          />
+          <button
+            type="submit"
+            disabled={!inputText.trim()}
+            className="p-1.5 rounded-md bg-pit-accent/20 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/30 disabled:opacity-30 transition-colors"
+          >
+            <Send size={14} />
+          </button>
+        </form>
+        <div className="mt-1.5 flex items-center gap-1 text-[9px] text-gray-600">
+          <Mic size={9} />
+          <span>Hold <kbd className="px-1 py-0.5 bg-gray-800/80 border border-gray-700/50 rounded text-gray-500 font-mono">{pttLabel}</kbd> to speak</span>
+        </div>
+      </div>
     </div>
   );
 }
