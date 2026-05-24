@@ -29,6 +29,8 @@ class UniversalTelemetry:
     engine_rpm: float = 0.0
     current_gear: int = 0
     max_rpm: float = 8000.0
+    power_watts: float = 0.0
+    torque_nm: float = 0.0
     throttle: float = 0.0
     brake: float = 0.0
     steering_angle: float = 0.0
@@ -116,6 +118,10 @@ class UniversalTelemetry:
         speeds = [f.speed_kmh for f in history]
         rpms = [f.engine_rpm for f in history]
 
+        # --- Power & Torque ---
+        power = [f.power_watts for f in history]
+        torque = [f.torque_nm for f in history]
+
         def avg(lst):
             return round(sum(lst) / len(lst), 2) if lst else 0
 
@@ -138,6 +144,8 @@ class UniversalTelemetry:
                 "time_above_90pct_redline": pct_above(
                     [r / (history[0].max_rpm or 1) for r in rpms], 0.9
                 ),
+                "peak_power_hp": round(max(power) / 745.7, 1) if max(power) > 0 else 0,
+                "peak_torque_nm": round(max(torque), 1),
             },
             "tire_temps_celsius": {
                 "front_left": {"avg": avg(temps_fl), "max": round(max(temps_fl), 1)},

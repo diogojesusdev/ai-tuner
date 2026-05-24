@@ -140,6 +140,8 @@ class ForzaAdapter(BaseTelemetryAdapter):
         throttle = brake = steering = 0.0
         gear = 0
         pos_x = pos_y = pos_z = 0.0
+        power_watts = 0.0
+        torque_nm = 0.0
 
         # Parse dash extension if available
         if len(data) >= SLED_SIZE + DASH_SIZE:
@@ -148,6 +150,8 @@ class ForzaAdapter(BaseTelemetryAdapter):
             pos_y = dash[1]
             pos_z = dash[2]
             # dash[3] is speed in m/s (redundant)
+            power_watts = dash[4]
+            torque_nm = dash[5]
             tire_fl = dash[6]
             tire_fr = dash[7]
             tire_rl = dash[8]
@@ -163,6 +167,8 @@ class ForzaAdapter(BaseTelemetryAdapter):
             engine_rpm=round(current_rpm, 1),
             current_gear=gear,
             max_rpm=round(engine_max_rpm, 1),
+            power_watts=round(power_watts, 1),
+            torque_nm=round(torque_nm, 1),
             throttle=round(throttle, 3),
             brake=round(brake, 3),
             steering_angle=round(steering, 3),
