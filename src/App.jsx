@@ -84,12 +84,15 @@ function App() {
             { label: 'High HP (700+)', value: 'High HP, 700+ hp' },
           ]);
         } else if (req.type === 'discipline') {
-          setQuickActions([
-            { label: 'Racing', value: 'Racing' },
-            { label: 'Drifting', value: 'Drifting' },
-            { label: 'Rally', value: 'Rally' },
-            { label: 'Drag', value: 'Drag' },
-          ]);
+          // Only show discipline quick-select when car name is already known
+          if (carName) {
+            setQuickActions([
+              { label: 'Racing', value: 'Racing' },
+              { label: 'Drifting', value: 'Drifting' },
+              { label: 'Rally', value: 'Rally' },
+              { label: 'Drag', value: 'Drag' },
+            ]);
+          }
         } else {
           setQuickActions([]);
         }

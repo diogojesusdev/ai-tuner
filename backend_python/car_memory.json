@@ -1,3 +1,11 @@
 {
-  "cars": {}
+  "cars": {
+    "3402": {
+      "discipline": "drifting",
+      "past_modifications": [],
+      "tune": {
+        "discipline": "drifting"
+      }
+    }
+  }
 }

@@ -31,6 +31,12 @@ class STTEngine:
         self._audio_queue: queue.Queue = queue.Queue()
         self._sample_rate = 16000
         self._channels = 1
+        self._input_device = None  # None = system default
+
+    def set_device(self, device_index):
+        """Set the audio input device by index. None = system default."""
+        self._input_device = device_index
+        print(f"[STT] Input device set to: {device_index}")
 
     def initialize(self):
         """Load the whisper model. Call once at startup."""
@@ -70,6 +76,7 @@ class STTEngine:
                     self._audio_frames.append(indata.copy())
 
             with sd.InputStream(
+                device=self._input_device,
                 samplerate=self._sample_rate,
                 channels=self._channels,
                 dtype='float32',

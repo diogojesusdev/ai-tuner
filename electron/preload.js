@@ -23,6 +23,10 @@ contextBridge.exposeInMainWorld('pitwall', {
   getTune: (vehicleId) => ipcRenderer.invoke('get-tune', { vehicleId }),
   saveTune: (vehicleId, data) => ipcRenderer.invoke('save-tune', { vehicleId, data }),
   
+  // Audio input devices
+  getInputDevices: () => ipcRenderer.invoke('get-input-devices'),
+  setInputDevice: (deviceIndex) => ipcRenderer.invoke('set-input-device', { deviceIndex }),
+  
   // Auto-update
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),

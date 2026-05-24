@@ -37,6 +37,8 @@ function SettingsPanel({ onClose }) {
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('gemini-3.1-flash-lite');
   const [pttKey, setPttKey] = useState('caps_lock');
+  const [inputDevice, setInputDevice] = useState('');
+  const [inputDevices, setInputDevices] = useState([]);
   const [toggleOverlay, setToggleOverlay] = useState('F10');
   const [telemetryWindow, setTelemetryWindow] = useState(5);
   const [status, setStatus] = useState('');
@@ -52,11 +54,20 @@ function SettingsPanel({ onClose }) {
     const savedPtt = localStorage.getItem('pitwall_ptt_key') || 'caps_lock';
     const savedToggle = localStorage.getItem('pitwall_shortcut_toggle') || 'F10';
     const savedWindow = localStorage.getItem('pitwall_telemetry_window') || '5';
+    const savedDevice = localStorage.getItem('pitwall_input_device') || '';
     setApiKey(savedKey);
     setModel(savedModel);
     setPttKey(savedPtt);
     setToggleOverlay(savedToggle);
     setTelemetryWindow(parseInt(savedWindow, 10));
+    setInputDevice(savedDevice);
+
+    // Load available input devices
+    if (window.pitwall?.getInputDevices) {
+      window.pitwall.getInputDevices().then(devices => {
+        setInputDevices(devices || []);
+      });
+    }
 
     // Load app version
     if (window.pitwall?.getAppVersion) {
@@ -105,6 +116,7 @@ function SettingsPanel({ onClose }) {
     localStorage.setItem('pitwall_ptt_key', pttKey);
     localStorage.setItem('pitwall_shortcut_toggle', toggleOverlay);
     localStorage.setItem('pitwall_telemetry_window', String(telemetryWindow));
+    localStorage.setItem('pitwall_input_device', inputDevice);
 
     // Send to Electron main process
     if (window.pitwall) {
@@ -114,6 +126,9 @@ function SettingsPanel({ onClose }) {
         toggleOverlay,
       });
       await window.pitwall.setTelemetryWindow(telemetryWindow);
+      if (inputDevice !== '') {
+        await window.pitwall.setInputDevice(parseInt(inputDevice, 10));
+      }
       if (result.success) {
         setStatus('✓ Settings saved');
       } else {
@@ -186,17 +201,34 @@ function SettingsPanel({ onClose }) {
             <Mic size={10} />
             Voice
           </h3>
-          <div>
-            <label className="text-[10px] text-gray-400 mb-1 block">Push-to-Talk Key</label>
-            <select
-              value={pttKey}
-              onChange={(e) => setPttKey(e.target.value)}
-              className="w-full bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-pit-accent/50"
-            >
-              {PTT_KEY_OPTIONS.map((k) => (
-                <option key={k.id} value={k.id}>{k.name}</option>
-              ))}
-            </select>
+          <div className="space-y-3">
+            <div>
+              <label className="text-[10px] text-gray-400 mb-1 block">Microphone</label>
+              <select
+                value={inputDevice}
+                onChange={(e) => setInputDevice(e.target.value)}
+                className="w-full bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-pit-accent/50"
+              >
+                <option value="">System Default</option>
+                {inputDevices.map((d) => (
+                  <option key={d.index} value={d.index}>
+                    {d.name}{d.default ? ' (Default)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 mb-1 block">Push-to-Talk Key (hold to speak)</label>
+              <select
+                value={pttKey}
+                onChange={(e) => setPttKey(e.target.value)}
+                className="w-full bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-pit-accent/50"
+              >
+                {PTT_KEY_OPTIONS.map((k) => (
+                  <option key={k.id} value={k.id}>{k.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </section>
 

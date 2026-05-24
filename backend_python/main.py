@@ -130,6 +130,20 @@ class AITunerBackend:
                 new_key = msg.get("data", {}).get("key", "caps_lock")
                 self._update_ptt_key(new_key)
 
+            elif msg_type == "GET_INPUT_DEVICES":
+                # List available audio input devices
+                devices = self._get_input_devices()
+                await websocket.send(json.dumps({
+                    "type": "INPUT_DEVICES",
+                    "data": devices
+                }))
+
+            elif msg_type == "SET_INPUT_DEVICE":
+                # Set the audio input device index
+                device_index = msg.get("data", {}).get("device_index")
+                self.stt.set_device(device_index)
+                print(f"[STT] Input device set to index: {device_index}")
+
         except json.JSONDecodeError:
             print(f"[WS] Invalid JSON received: {raw[:100]}")
         except Exception as e:
@@ -333,6 +347,28 @@ class AITunerBackend:
             print(f"[Hotkey] PTT key updated to: {new_key} (restart backend to apply)")
         except Exception as e:
             print(f"[Hotkey] Failed to save PTT key: {e}")
+
+    def _get_input_devices(self) -> list:
+        """List available audio input devices."""
+        try:
+            import sounddevice as sd
+            devices = sd.query_devices()
+            input_devices = []
+            for i, d in enumerate(devices):
+                if d['max_input_channels'] > 0:
+                    input_devices.append({
+                        "index": i,
+                        "name": d['name'],
+                        "channels": d['max_input_channels'],
+                        "default": i == sd.default.device[0],
+                    })
+            return input_devices
+        except ImportError:
+            print("[Audio] sounddevice not installed, cannot list devices.")
+            return []
+        except Exception as e:
+            print(f"[Audio] Error listing devices: {e}")
+            return []
 
     def stop(self):
         """Gracefully stop all services."""

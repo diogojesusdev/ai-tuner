@@ -55,10 +55,11 @@ const SYSTEM_PROMPT = `You are an elite pit-lane race car engineer operating in 
 You are given a "current_state" in every message. Follow the protocol for that state:
 
 ### IDENTIFY_CAR
-The system detected a new car (vehicle_id provided). Ask the driver to confirm the car name and what discipline they'll be driving (racing, drifting, rally, or drag). Keep it brief — they're in-game.
-Use user_input_request with type "discipline" so the UI shows quick-select buttons.
-Once the driver confirms **drifting**, ask a follow-up for the HP tier using user_input_request with type "hp_tier". Do NOT ask about HP tier upfront or for non-drifting disciplines.
+The system detected a new car (vehicle_id provided). Ask the driver: what car is this? Keep it to ONE short sentence.
+Once they confirm the car name, ask which discipline (racing, drifting, rally, drag) using user_input_request with type "discipline".
+Once the driver confirms **drifting**, ask the HP tier using user_input_request with type "hp_tier". Do NOT ask about HP tier upfront or for non-drifting disciplines.
 Store car_name, discipline, and hp_tier via tune_updates when confirmed.
+IMPORTANT: Do NOT bundle multiple questions. Ask one thing at a time. Keep all replies in this state extremely short (1-2 sentences max).
 
 ### COLLECTING_DATA  
 The driver is actively driving to build up telemetry history. Acknowledge this, tell them you're watching, and let them know when you have enough data. You can answer brief questions but don't suggest tune changes yet.
@@ -111,7 +112,7 @@ You MUST reply as JSON:
 - You do NOT know exact slider values. Suggest RELATIVE adjustments ("add 2 clicks", "soften by 0.1 Bar").
 - Only transition to SUGGESTING when you actually have pending_changes.
 - Reference specific telemetry values when explaining reasoning (e.g., "Your rear slip angle is averaging 12° vs 6° front — classic oversteer").
-- Be concise — the driver is focused on the game.
+- Be concise — the driver is focused on the game. Keep non-technical interactions (identity, discipline, confirmation) to 1-2 sentences max. No filler, no greetings, no "welcome" messages.
 - If current tune values are empty/unknown, ask the user to provide their current settings before suggesting changes.`;
 
 function createWindow() {
@@ -279,7 +280,7 @@ async function onCarChanged(vehicleId) {
     } else {
       if (mainWindow) {
         mainWindow.webContents.send('ai-response', {
-          reply: `New car detected (ID: ${vehicleId}). Tell me what car this is and what discipline (racing, drifting, rally, or drag).`,
+          reply: `New car detected (ID: ${vehicleId}). What car is this?`,
           pending_changes: [],
         });
       }
@@ -556,6 +557,34 @@ ipcMain.handle('save-tune', async (event, { vehicleId, data }) => {
     vehicle_id: vehicleId || currentVehicleId,
     updates: data,
   });
+  return { success: true };
+});
+
+ipcMain.handle('get-input-devices', async () => {
+  if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
+    return [];
+  }
+  return new Promise((resolve) => {
+    const handler = (data) => {
+      try {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'INPUT_DEVICES') {
+          wsConnection.off('message', handler);
+          resolve(msg.data);
+        }
+      } catch {}
+    };
+    wsConnection.on('message', handler);
+    sendToBackend('GET_INPUT_DEVICES', {});
+    setTimeout(() => {
+      wsConnection.off('message', handler);
+      resolve([]);
+    }, 2000);
+  });
+});
+
+ipcMain.handle('set-input-device', async (event, { deviceIndex }) => {
+  sendToBackend('SET_INPUT_DEVICE', { device_index: deviceIndex });
   return { success: true };
 });
 
