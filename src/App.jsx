@@ -95,11 +95,6 @@ function App() {
            style={{ WebkitAppRegion: 'drag' }}>
         <GripVertical size={12} className="text-gray-600" />
         <span className="text-[10px] font-medium text-gray-400 flex-1">PITWALL</span>
-        {/* Backend status dot */}
-        <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' }}>
-          <div className={`w-2 h-2 rounded-full ${backendConnected ? 'bg-pit-accent' : 'bg-pit-danger'}`}
-               title={backendConnected ? 'Backend connected' : 'Backend offline'} />
-        </div>
         <button
           onClick={() => setShowSettings(!showSettings)}
           className={`hover:text-pit-accent transition-colors ${showSettings ? 'text-pit-accent' : 'text-gray-500'}`}

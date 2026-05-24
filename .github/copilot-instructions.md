@@ -14,7 +14,7 @@ Game (UDP:5300) → Python Backend → WebSocket (ws://127.0.0.1:8765) → Elect
 ### Key Design Decisions
 - **Python does NOT call Gemini** — only Electron's main process talks to the AI via `@google/genai` SDK
 - **WebSocket is the only bridge** between Python and Electron (no HTTP, no IPC pipes)
-- **Click-through window** — Electron uses `setIgnoreMouseEvents(true, {forward: true})` by default; only interactive elements (chat, settings) capture mouse via `onMouseEnter`/`onMouseLeave` toggling
+- **Always-on-top interactive window** — Electron uses a compact 500×700 panel with `alwaysOnTop: true` at `floating` level. No click-through; always interactive. Game should be in borderless windowed mode.
 - **Structured JSON output** — Gemini is forced to respond with `{ "reply": string, "pending_changes": array }` via `responseMimeType: 'application/json'`
 - **Relative adjustments only** — the AI never knows absolute slider values; it suggests "+2 clicks", "soften by 0.1 Bar", etc.
 
@@ -28,7 +28,8 @@ Game (UDP:5300) → Python Backend → WebSocket (ws://127.0.0.1:8765) → Elect
 | `TELEMETRY_SUMMARY` | Python → Electron | Response with aggregated stats |
 | `GET_CAR_MEMORY` | Electron → Python | Load car setup history |
 | `CAR_MEMORY` | Python → Electron | Car memory data |
-| `UPDATE_CAR_MEMORY` | Electron → Python | Persist a confirmed tuning change |
+| `LISTENING_STATE` | Python → Electron | PTT press/release notification |
+| `SET_PTT_KEY` | Electron → Python | Change push-to-talk binding |
 
 ## File Purposes
 
@@ -53,10 +54,10 @@ Game (UDP:5300) → Python Backend → WebSocket (ws://127.0.0.1:8765) → Elect
 ### React (`src/`)
 | File | Role |
 |------|------|
-| `App.jsx` | Layout orchestrator, WebSocket event listeners, click-through management |
-| `components/TelemetryHUD.jsx` | Suspension bars, tire temp grid, RPM/speed display |
-| `components/ChatWindow.jsx` | Message history + pending changes checkbox list |
-| `components/SettingsPanel.jsx` | API key input, model dropdown, localStorage persistence |
+| `App.jsx` | Layout orchestrator, view switching (settings vs main), event listeners |
+| `components/TelemetryHUD.jsx` | Compact speed/RPM display with telemetry connection icon |
+| `components/ChatWindow.jsx` | Message history + pending changes checkboxes + listening indicator |
+| `components/SettingsPanel.jsx` | Full-page settings: API key, model, PTT key, all keyboard shortcuts |
 
 ## Development Commands
 ```bash
@@ -76,6 +77,7 @@ build.bat            # Create Windows NSIS installer
 5. Add a selection option in `config.json` under `telemetry.game`
 
 ## Important Conventions
+- **You are a UX expert.** Always think about user experience when implementing features. Every UI element must have a clear purpose — if it doesn't communicate useful information or afford an action, remove it. Avoid cryptic indicators, unlabeled dots, or decoration that adds visual noise without meaning.
 - Python uses `asyncio` throughout — never block the event loop
 - All telemetry values are metric (km/h, Celsius, meters)
 - Suspension travel is normalized 0.0–1.0 (0=full extension, 1=bottomed out)
@@ -83,10 +85,19 @@ build.bat            # Create Windows NSIS installer
 - The `car_memory.json` keys vehicles by their integer `vehicle_id` (Forza's CarOrdinal)
 - UI uses TailwindCSS with custom colors prefixed `pit-` (pit-accent, pit-warn, pit-danger, pit-info)
 - Glass panels use `backdrop-filter: blur(12px)` with semi-transparent backgrounds
+- The overlay is a compact always-on-top panel (not fullscreen). No click-through mode — always interactive.
+- Settings view completely replaces the main content (telemetry + chat) — it is NOT a modal or overlay.
+
+## UX Principles
+- Every visible element must have an immediately obvious meaning — no unlabeled colored dots or cryptic icons
+- Prefer contextual indicators over persistent status lights (e.g., show "Listening..." only while PTT is held)
+- Minimize visual noise — the user is driving a car and glancing at this panel briefly
+- If a feature requires explanation, it needs a better design, not a tooltip
+- Keyboard shortcuts must all be user-configurable from the Settings panel
 
 ## Common Pitfalls
 - Forza struct indices are dense — double-check byte offsets when modifying the adapter
-- Electron's `setIgnoreMouseEvents` must be toggled carefully or the UI becomes unclickable
 - The Python WebSocket server must be running BEFORE Electron starts (Electron auto-reconnects every 3s)
 - `faster-whisper` model download happens on first run — initial STT startup will be slow
 - pyttsx3 on Windows uses SAPI5 — voice quality depends on installed Windows voices
+- Electron globalShortcut can fail silently if another app already registered the same key
