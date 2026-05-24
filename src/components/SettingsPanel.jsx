@@ -184,9 +184,9 @@ function SettingsPanel({ onClose }) {
             <input
               type="number"
               min="1"
-              max="30"
+              max="10"
               value={telemetryWindow}
-              onChange={(e) => setTelemetryWindow(Math.max(1, Math.min(30, parseInt(e.target.value, 10) || 5)))}
+              onChange={(e) => setTelemetryWindow(Math.max(1, Math.min(10, parseInt(e.target.value, 10) || 5)))}
               className="w-full bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-pit-accent/50"
             />
             <p className="text-[9px] text-gray-600 mt-1">
