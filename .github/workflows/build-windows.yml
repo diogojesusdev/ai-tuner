@@ -1,0 +1,76 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+      create_release:
+        description: 'Create a GitHub Release?'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set version in package.json
+        run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
+
+      - name: Build frontend
+        run: npx vite build
+
+      - name: Build Electron installer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish never
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AI-Tuner-Setup-${{ github.event.inputs.version }}
+          path: dist/installer/*.exe
+
+      - name: Create GitHub Release
+        if: ${{ github.event.inputs.create_release == 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: AI Tuner v${{ github.event.inputs.version }}
+          body: |
+            ## AI Tuner v${{ github.event.inputs.version }}
+            
+            Voice-activated AI race engineer overlay for Forza Horizon 6.
+            
+            ### Installation
+            Download and run the `.exe` installer below.
+            
+            ### Requirements
+            - Windows 10/11
+            - Python 3.11+ (for telemetry backend)
+            - Forza Horizon 6 with Data Out enabled (UDP port 5300)
+            - Gemini API key ([Get one free](https://aistudio.google.com))
+          files: dist/installer/*.exe
+          draft: false
+          prerelease: false

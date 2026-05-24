@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Tuner - Your AI Race Engineer for Forza Horizon 6</title>
+  <meta name="description" content="Voice-activated AI race engineer overlay for Forza Horizon 6. Real-time telemetry analysis, intelligent tuning suggestions, and per-car setup memory." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --red: #ff2d55;
+      --red-dark: #cc1a3d;
+      --blue: #4da6ff;
+      --blue-dark: #2d7fd4;
+      --dark: #0a0a0f;
+      --dark-panel: #111118;
+      --gray: #888;
+      --gray-light: #ccc;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--dark);
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 60% 40%, rgba(255, 45, 85, 0.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 30% 70%, rgba(77, 166, 255, 0.05) 0%, transparent 50%);
+      animation: drift 20s ease-in-out infinite alternate;
+    }
+
+    @keyframes drift {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      100% { transform: translate(-5%, 3%) rotate(2deg); }
+    }
+
+    .hero-content { position: relative; z-index: 1; max-width: 800px; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      background: rgba(255, 45, 85, 0.1);
+      border: 1px solid rgba(255, 45, 85, 0.3);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--red);
+      margin-bottom: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--red);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    h1 {
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.03em;
+    }
+
+    h1 span { color: var(--red); }
+
+    .subtitle {
+      font-size: 1.25rem;
+      color: var(--gray);
+      max-width: 600px;
+      margin: 0 auto 3rem;
+      line-height: 1.6;
+    }
+
+    .cta-group {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.9rem 2rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(255, 45, 85, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--red-dark);
+      box-shadow: 0 6px 30px rgba(255, 45, 85, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Features */
+    .features {
+      padding: 6rem 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .features h2 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .features h2 span { color: var(--red); }
+
+    .features-subtitle {
+      text-align: center;
+      color: var(--gray);
+      margin-bottom: 4rem;
+      font-size: 1rem;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .feature-card {
+      background: var(--dark-panel);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 2rem;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(255, 45, 85, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .feature-icon.red { background: rgba(255, 45, 85, 0.15); color: var(--red); }
+    .feature-icon.blue { background: rgba(77, 166, 255, 0.15); color: var(--blue); }
+
+    .feature-card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .feature-card p {
+      color: var(--gray);
+      font-size: 0.85rem;
+      line-height: 1.7;
+    }
+
+    /* How it works */
+    .how-it-works {
+      padding: 6rem 2rem;
+      background: var(--dark-panel);
+    }
+
+    .how-it-works-inner {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .how-it-works h2 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.5rem;
+    }
+
+    .step-number {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      background: var(--red);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .step h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .step p {
+      color: var(--gray);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    /* Tech specs */
+    .tech {
+      padding: 6rem 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .tech h2 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .tech-item {
+      background: var(--dark-panel);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .tech-item .label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gray);
+      margin-bottom: 0.5rem;
+    }
+
+    .tech-item .value {
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--blue);
+    }
+
+    /* Footer */
+    footer {
+      padding: 3rem 2rem;
+      text-align: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    footer p {
+      color: var(--gray);
+      font-size: 0.8rem;
+    }
+
+    footer a {
+      color: var(--red);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .feature-grid { grid-template-columns: 1fr; }
+      .tech-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="badge">Built for Forza Horizon 6</div>
+      <h1>Your AI <span>Race Engineer</span></h1>
+      <p class="subtitle">
+        Real-time telemetry analysis, voice-activated tuning suggestions, and per-car setup memory.
+        Talk to your engineer while you drive.
+      </p>
+      <div class="cta-group">
+        <a href="https://github.com/diogojesusdev/ai-tuner/releases/latest" class="btn btn-primary">
+          ⬇ Download for Windows
+        </a>
+        <a href="https://github.com/diogojesusdev/ai-tuner" class="btn btn-secondary">
+          View on GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <h2>Built for <span>Drivers</span></h2>
+    <p class="features-subtitle">Everything you need to dial in the perfect setup without leaving the cockpit.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon red">🎙️</div>
+        <h3>Voice-Activated</h3>
+        <p>Hold push-to-talk and describe how the car feels. "The rear is snapping on entry" — your engineer handles the rest. Fully local speech-to-text, zero latency.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">📊</div>
+        <h3>Live Telemetry Analysis</h3>
+        <p>Reads tire temps, slip ratios, suspension travel, G-forces, and driver inputs in real-time via Forza's UDP Data Out. Per-corner data for surgical precision.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon red">🧠</div>
+        <h3>Gemini AI Engineer</h3>
+        <p>Powered by Google's Gemini AI. Understands racing physics, drifting dynamics, and tuning relationships. Suggests relative adjustments based on real data.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">💾</div>
+        <h3>Per-Car Memory</h3>
+        <p>Every tune is saved per vehicle. Switch cars and your engineer remembers the last setup, discipline, HP tier, and modification history.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon red">🏎️</div>
+        <h3>All Disciplines</h3>
+        <p>Racing, drifting, rally, or drag — the engineer adapts its approach. Drifting builds get HP-tier-specific advice (low/mid/high).</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">🪟</div>
+        <h3>Always-On Overlay</h3>
+        <p>Transparent, always-on-top window with compact speed/RPM readout. Sits over your game in borderless windowed mode. Toggle visibility with a hotkey.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="how-it-works">
+    <div class="how-it-works-inner">
+      <h2>How It Works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div>
+            <h4>Enable Forza Data Out</h4>
+            <p>In FH6 settings, enable "Data Out" on UDP port 5300. This broadcasts live telemetry to AI Tuner.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div>
+            <h4>Launch AI Tuner</h4>
+            <p>Run the app, enter your free Gemini API key in Settings. The overlay appears and connects to telemetry automatically.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div>
+            <h4>Drive &amp; Identify</h4>
+            <p>Start driving. The engineer detects your car and asks you to confirm the name and discipline. Quick-select buttons make it instant.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <div>
+            <h4>Collect &amp; Analyze</h4>
+            <p>Drive for a few minutes while the engineer builds a telemetry profile — tire temps, balance, slip patterns, G-forces.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number">5</div>
+          <div>
+            <h4>Get Tuning Advice</h4>
+            <p>Describe what feels wrong or just ask. The engineer cross-references your telemetry data and suggests relative adjustments. Apply them in the garage and keep driving.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech -->
+  <section class="tech">
+    <h2>Under the Hood</h2>
+    <div class="tech-grid">
+      <div class="tech-item">
+        <div class="label">AI Model</div>
+        <div class="value">Gemini 3.1 Flash Lite</div>
+      </div>
+      <div class="tech-item">
+        <div class="label">Speech</div>
+        <div class="value">faster-whisper (local)</div>
+      </div>
+      <div class="tech-item">
+        <div class="label">Telemetry</div>
+        <div class="value">10 Hz UDP</div>
+      </div>
+      <div class="tech-item">
+        <div class="label">Framework</div>
+        <div class="value">Electron + React</div>
+      </div>
+      <div class="tech-item">
+        <div class="label">Backend</div>
+        <div class="value">Python asyncio</div>
+      </div>
+      <div class="tech-item">
+        <div class="label">Platform</div>
+        <div class="value">Windows 10/11</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      AI Tuner is open source. <a href="https://github.com/diogojesusdev/ai-tuner">Star it on GitHub</a> · 
+      Not affiliated with Forza, Xbox, or Turn 10.
+    </p>
+  </footer>
+</body>
+</html>
