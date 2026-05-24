@@ -7,7 +7,7 @@ import { MessageCircle, CheckCircle2, Circle, Send, Mic } from 'lucide-react';
  * and a pulsing mic indicator when the user is speaking.
  */
 
-function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage, isListening }) {
+function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage, isListening, quickActions, onQuickAction }) {
   const [inputText, setInputText] = useState('');
   const [checkedChanges, setCheckedChanges] = useState(new Set());
   const messagesEndRef = useRef(null);
@@ -136,6 +136,24 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
             >
               Confirm All
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Action Buttons */}
+      {quickActions && quickActions.length > 0 && (
+        <div className="px-4 py-2 border-t border-gray-800/50 bg-gray-900/30">
+          <div className="text-[10px] text-gray-500 mb-1.5">Quick select:</div>
+          <div className="flex flex-wrap gap-1.5">
+            {quickActions.map((action, i) => (
+              <button
+                key={i}
+                onClick={() => onQuickAction(action.value)}
+                className="px-2.5 py-1 rounded-full text-[10px] bg-pit-accent/10 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/20 transition-colors"
+              >
+                {action.label}
+              </button>
+            ))}
           </div>
         </div>
       )}

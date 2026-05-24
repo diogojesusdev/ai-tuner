@@ -35,6 +35,7 @@ function App() {
   const [vehicleId, setVehicleId] = useState(null);
   const [agentState, setAgentState] = useState('IDLE');
   const [carName, setCarName] = useState(null);
+  const [quickActions, setQuickActions] = useState([]);
 
   // Auto-open settings if no API key is configured
   useEffect(() => {
@@ -72,6 +73,28 @@ function App() {
       ]);
       if (data.pending_changes && data.pending_changes.length > 0) {
         setPendingChanges((prev) => [...prev, ...data.pending_changes]);
+      }
+      // Handle quick-action prompts from LLM
+      if (data.user_input_request) {
+        const req = data.user_input_request;
+        if (req.type === 'hp_tier') {
+          setQuickActions([
+            { label: 'Low HP (250–400)', value: 'Low HP, 250-400 hp' },
+            { label: 'Mid HP (400–700)', value: 'Mid HP, 400-700 hp' },
+            { label: 'High HP (700+)', value: 'High HP, 700+ hp' },
+          ]);
+        } else if (req.type === 'discipline') {
+          setQuickActions([
+            { label: 'Racing', value: 'Racing' },
+            { label: 'Drifting', value: 'Drifting' },
+            { label: 'Rally', value: 'Rally' },
+            { label: 'Drag', value: 'Drag' },
+          ]);
+        } else {
+          setQuickActions([]);
+        }
+      } else {
+        setQuickActions([]);
       }
     });
 
@@ -124,6 +147,16 @@ function App() {
       { role: 'user', text, timestamp: Date.now() / 1000 },
     ]);
     await window.pitwall.sendMessage(text);
+  }, []);
+
+  const handleQuickAction = useCallback(async (value) => {
+    setQuickActions([]);
+    if (!window.pitwall) return;
+    setMessages((prev) => [
+      ...prev,
+      { role: 'user', text: value, timestamp: Date.now() / 1000 },
+    ]);
+    await window.pitwall.sendMessage(value);
   }, []);
 
   return (
@@ -197,6 +230,8 @@ function App() {
                 onConfirmChanges={handleConfirmChanges}
                 onSendMessage={handleSendMessage}
                 isListening={isListening}
+                quickActions={quickActions}
+                onQuickAction={handleQuickAction}
               />
             ) : (
               <TuneSheet vehicleId={vehicleId} />

@@ -105,6 +105,7 @@ function getEmptyTune() {
 function TuneSheet({ vehicleId }) {
   const [tune, setTune] = useState(getEmptyTune());
   const [discipline, setDiscipline] = useState('');
+  const [hpTier, setHpTier] = useState('');
   const [carName, setCarName] = useState('');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
@@ -122,6 +123,7 @@ function TuneSheet({ vehicleId }) {
         setTune((prev) => ({ ...prev, ...data.tune }));
       }
       if (data.discipline) setDiscipline(data.discipline);
+      if (data.hp_tier) setHpTier(data.hp_tier);
       if (data.car_name) setCarName(data.car_name);
       setStatus('Updated by engineer');
       setTimeout(() => setStatus(''), 2000);
@@ -140,6 +142,7 @@ function TuneSheet({ vehicleId }) {
       setTune((prev) => ({ ...prev, ...data.tune }));
     }
     if (data?.discipline) setDiscipline(data.discipline);
+    if (data?.hp_tier) setHpTier(data.hp_tier);
     if (data?.car_name) setCarName(data.car_name);
   };
 
@@ -150,7 +153,7 @@ function TuneSheet({ vehicleId }) {
   const handleSave = async () => {
     if (!window.pitwall) return;
     setSaving(true);
-    await window.pitwall.saveTune(vehicleId, { tune, discipline, car_name: carName });
+    await window.pitwall.saveTune(vehicleId, { tune, discipline, hp_tier: hpTier, car_name: carName });
     setStatus('✓ Saved');
     setSaving(false);
     setTimeout(() => setStatus(''), 2000);
@@ -220,14 +223,27 @@ function TuneSheet({ vehicleId }) {
               className="w-full bg-gray-800/50 border border-gray-700/30 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-pit-accent/50"
             >
               <option value="">Select...</option>
-              <option value="drift">Drift</option>
-              <option value="grip">Grip Racing</option>
-              <option value="drag">Drag</option>
-              <option value="offroad">Offroad</option>
-              <option value="rally">Rally</option>
-              <option value="street">Street</option>
-            </select>
+             <option value="racing">Racing</option>
+             <option value="drifting">Drifting</option>
+             <option value="rally">Rally</option>
+             <option value="drag">Drag</option>
+           </select>
           </div>
+          {discipline === 'drifting' && (
+           <div>
+             <label className="text-[10px] text-gray-400 mb-0.5 block">HP Tier</label>
+             <select
+               value={hpTier}
+               onChange={(e) => setHpTier(e.target.value)}
+               className="w-full bg-gray-800/50 border border-gray-700/30 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-pit-accent/50"
+             >
+               <option value="">Select...</option>
+               <option value="low">Low HP (250–400)</option>
+               <option value="mid">Mid HP (400–700)</option>
+               <option value="high">High HP (700+)</option>
+             </select>
+           </div>
+          )}
         </div>
 
         {/* Tune categories */}
