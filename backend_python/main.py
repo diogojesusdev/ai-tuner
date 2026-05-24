@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Set
 
 import websockets
-from websockets.server import WebSocketServerProtocol
 
 from telemetry import ForzaAdapter, UniversalTelemetry
 from voice import STTEngine, TTSEngine
@@ -38,7 +37,7 @@ class AITunerBackend:
             voice_index=CONFIG["voice"]["tts_voice_index"],
         )
 
-        self.ws_clients: Set[WebSocketServerProtocol] = set()
+        self.ws_clients: Set = set()
         self.latest_telemetry: UniversalTelemetry | None = None
         self.telemetry_history: collections.deque = collections.deque(maxlen=6000)  # ~10min at 10Hz
         self.broadcast_rate = CONFIG["telemetry"]["broadcast_rate_hz"]
@@ -72,7 +71,7 @@ class AITunerBackend:
                 self._ws_message_loop(),
             )
 
-    async def _ws_handler(self, websocket: WebSocketServerProtocol):
+    async def _ws_handler(self, websocket):
         """Handle new WebSocket connections."""
         self.ws_clients.add(websocket)
         client_addr = websocket.remote_address
@@ -87,7 +86,7 @@ class AITunerBackend:
             print(f"[WS] Client disconnected: {client_addr}")
 
     async def _handle_ws_message(
-        self, websocket: WebSocketServerProtocol, raw: str
+        self, websocket, raw: str
     ):
         """Process incoming WebSocket messages from Electron."""
         try:
