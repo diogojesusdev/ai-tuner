@@ -3,13 +3,14 @@
  * Handles: transparent window, Gemini API, WebSocket client, IPC
  */
 
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
 const path = require('path');
 const WebSocket = require('ws');
 const { GoogleGenAI } = require('@google/genai');
 
 let mainWindow = null;
 let wsConnection = null;
+let overlayVisible = true;
 let genaiClient = null;
 let chatSession = null;
 
@@ -49,9 +50,9 @@ function createWindow() {
     frame: false,
     alwaysOnTop: true,
     hasShadow: false,
-    skipTaskbar: false,
-    resizable: true,
-    focusable: true,
+    skipTaskbar: true,
+    resizable: false,
+    focusable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -62,18 +63,15 @@ function createWindow() {
   // Use 'screen-saver' level to stay above fullscreen games
   mainWindow.setAlwaysOnTop(true, 'screen-saver');
 
-  // Click-through: ignore mouse events unless hovering interactive elements
+  // Start fully click-through
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
-  // Re-assert topmost when focus is lost (e.g., game reclaims focus)
-  mainWindow.on('blur', () => {
-    mainWindow.setAlwaysOnTop(true, 'screen-saver');
-  });
-
-  // Keep topmost after any show/restore
-  mainWindow.on('show', () => {
-    mainWindow.setAlwaysOnTop(true, 'screen-saver');
-  });
+  // Periodically re-assert topmost (handles game reclaiming z-order)
+  setInterval(() => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    }
+  }, 2000);
 
   if (isDev) {
     // Try Vite dev server first, fall back to built dist/
@@ -281,10 +279,14 @@ ipcMain.handle('set-ptt-key', async (event, { key }) => {
 
 ipcMain.handle('set-click-through', async (event, { ignore }) => {
   if (mainWindow) {
-    mainWindow.setIgnoreMouseEvents(ignore, { forward: true });
-    if (!ignore) {
-      // Bring overlay to front when user wants to interact
-      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    if (ignore) {
+      // Back to overlay mode: click-through, not focusable
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+      mainWindow.setFocusable(false);
+    } else {
+      // Interactive mode: capture clicks, become focusable
+      mainWindow.setIgnoreMouseEvents(false);
+      mainWindow.setFocusable(true);
       mainWindow.focus();
     }
   }
@@ -299,6 +301,22 @@ ipcMain.handle('get-pending-changes', async () => {
 app.whenReady().then(() => {
   createWindow();
   connectWebSocket();
+
+  // Global shortcut to toggle overlay visibility (F10)
+  globalShortcut.register('F10', () => {
+    if (!mainWindow) return;
+    overlayVisible = !overlayVisible;
+    if (overlayVisible) {
+      mainWindow.show();
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    } else {
+      mainWindow.hide();
+    }
+  });
+});
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {

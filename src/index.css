@@ -22,6 +22,7 @@ body {
   overflow: hidden;
   user-select: none;
   -webkit-app-region: no-drag;
+  pointer-events: none;
 }
 
 /* Scrollbar styling */
@@ -42,12 +43,13 @@ body {
   background: rgba(0, 255, 136, 0.5);
 }
 
-/* Glass effect for panels */
+/* Glass effect for panels - these capture mouse events */
 .glass-panel {
   background: rgba(10, 10, 20, 0.82);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(0, 255, 136, 0.15);
   border-radius: 8px;
+  pointer-events: auto;
 }
 
 /* Temperature color coding */
@@ -64,5 +66,10 @@ body {
 /* Interactive elements should capture mouse */
 .interactive {
   -webkit-app-region: no-drag;
+  pointer-events: auto;
+}
+
+/* Force pointer events on inputs/buttons inside panels */
+input, button, select, label, a {
   pointer-events: auto;
 }

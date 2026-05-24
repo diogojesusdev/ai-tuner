@@ -99,9 +99,10 @@ function App() {
       {/* Chat Window - Right Side */}
       {showChat && (
         <div
-          className="absolute top-4 right-4 bottom-4 w-96 interactive"
+          className="absolute top-4 right-4 bottom-4 w-96"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          style={{ pointerEvents: 'auto' }}
         >
           <ChatWindow
             messages={messages}
@@ -114,9 +115,10 @@ function App() {
 
       {/* Settings Button - Top Left */}
       <div
-        className="absolute top-4 left-4 interactive"
+        className="absolute top-4 left-4"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        style={{ pointerEvents: 'auto' }}
       >
         <button
           onClick={() => setShowSettings(!showSettings)}
@@ -141,9 +143,10 @@ function App() {
       {/* Settings Panel */}
       {showSettings && (
         <div
-          className="absolute top-16 left-4 w-80 interactive"
+          className="absolute top-16 left-4 w-80"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          style={{ pointerEvents: 'auto' }}
         >
           <SettingsPanel onClose={() => setShowSettings(false)} />
         </div>
