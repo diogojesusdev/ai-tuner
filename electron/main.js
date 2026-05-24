@@ -133,7 +133,7 @@ You MUST reply as JSON:
 ${TUNING_KNOWLEDGE}`;
 
 function createWindow() {
-  const isDev = !app.isPackaged;
+  const isDev = process.env.VITE_DEV_SERVER === '1';
 
   mainWindow = new BrowserWindow({
     width: 500,
@@ -171,12 +171,15 @@ function createWindow() {
 
 // ============ WebSocket Connection to Python Backend ============
 
+let wsReconnectAttempts = 0;
+
 function connectWebSocket() {
   const WS_URL = 'ws://127.0.0.1:8765';
   
   wsConnection = new WebSocket(WS_URL);
 
   wsConnection.on('open', () => {
+    wsReconnectAttempts = 0;
     console.log('[WS] Connected to Python backend');
     if (mainWindow) {
       mainWindow.webContents.send('backend-status', { connected: true });
@@ -193,8 +196,11 @@ function connectWebSocket() {
   });
 
   wsConnection.on('close', () => {
-    console.log('[WS] Disconnected from backend. Reconnecting in 3s...');
-    telemetryReceived = false; // Reset so UI gets notified on reconnect
+    wsReconnectAttempts++;
+    if (wsReconnectAttempts <= 3 || wsReconnectAttempts % 10 === 0) {
+      console.log(`[WS] Disconnected from backend. Reconnecting... (attempt ${wsReconnectAttempts})`);
+    }
+    telemetryReceived = false;
     if (mainWindow) {
       mainWindow.webContents.send('backend-status', { connected: false });
       mainWindow.webContents.send('telemetry-status', { receiving: false });
@@ -943,7 +949,7 @@ function startBackend() {
   const backendDir = path.join(__dirname, '..', 'backend_python');
   backendProcess = spawn('python', ['main.py'], {
     cwd: backendDir,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   });
 
@@ -966,7 +972,11 @@ function startBackend() {
 function stopBackend() {
   if (backendProcess && !backendProcess.killed) {
     console.log('[Backend] Stopping Python backend...');
-    backendProcess.kill();
+    try {
+      backendProcess.kill('SIGTERM');
+      // On Windows, forcefully kill the process tree
+      spawn('taskkill', ['/pid', String(backendProcess.pid), '/T', '/F'], { windowsHide: true });
+    } catch (e) { /* ignore */ }
     backendProcess = null;
   }
 }

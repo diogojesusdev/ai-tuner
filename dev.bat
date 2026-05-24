@@ -26,4 +26,5 @@ echo.
 :: Start Vite dev server in background, then launch Electron
 start "" /B npx vite --host 2>nul
 timeout /t 3 /nobreak >nul
+set VITE_DEV_SERVER=1
 npx electron .
