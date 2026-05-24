@@ -7,7 +7,7 @@ import { MessageCircle, CheckCircle2, Circle, Send, Mic, Image, X } from 'lucide
  * and a pulsing mic indicator when the user is speaking.
  */
 
-function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage, isListening, isThinking, quickActions, onQuickAction }) {
+function ChatWindow({ messages, pendingChanges, onConfirmChanges, onDismissChanges, onSendMessage, isListening, isThinking, quickActions, onQuickAction }) {
   const [inputText, setInputText] = useState('');
   const [pastedImages, setPastedImages] = useState([]); // [{data: base64, mimeType, preview: dataUrl}]
   const [checkedChanges, setCheckedChanges] = useState(new Set());
@@ -57,6 +57,10 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
     onSendMessage(inputText.trim(), images.length > 0 ? images : undefined);
     setInputText('');
     setPastedImages([]);
+    // Dismiss pending changes when user sends a custom message
+    if (pendingChanges.length > 0) {
+      onDismissChanges();
+    }
   };
 
   const toggleChange = (id) => {
@@ -211,6 +215,12 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
               className="text-[10px] px-2 py-1 rounded bg-gray-700/50 text-gray-300 border border-gray-600/30 hover:bg-gray-700 transition-colors"
             >
               Confirm All
+            </button>
+            <button
+              onClick={onDismissChanges}
+              className="text-[10px] px-2 py-1 rounded bg-gray-800/50 text-gray-500 border border-gray-700/30 hover:text-gray-300 hover:bg-gray-700/50 transition-colors ml-auto"
+            >
+              Ignore
             </button>
           </div>
         </div>

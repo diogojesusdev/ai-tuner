@@ -1,0 +1,3 @@
+- Ensure STT is working fine
+- Do a test with the supra mk5 on keyboard
+- Do a test with the supra mk5 on wheel

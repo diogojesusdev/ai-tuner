@@ -84,6 +84,8 @@ function App() {
         ...prev,
         { role: 'user', text: data.text, timestamp: data.timestamp },
       ]);
+      // Dismiss pending changes when user speaks a new message
+      setPendingChanges([]);
     });
 
     window.pitwall.onAiResponse((data) => {
@@ -212,6 +214,10 @@ function App() {
     await window.pitwall.stopCollecting();
   }, []);
 
+  const handleDismissChanges = useCallback(() => {
+    setPendingChanges([]);
+  }, []);
+
   return (
     <div className="w-full h-full flex flex-col glass-panel">
       {/* Title Bar (draggable to move window) */}
@@ -285,6 +291,7 @@ function App() {
                 messages={messages}
                 pendingChanges={pendingChanges}
                 onConfirmChanges={handleConfirmChanges}
+                onDismissChanges={handleDismissChanges}
                 onSendMessage={handleSendMessage}
                 isListening={isListening}
                 isThinking={isThinking}
