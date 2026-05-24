@@ -62,12 +62,25 @@ function SettingsPanel({ onClose }) {
     setTelemetryWindow(parseInt(savedWindow, 10));
     setInputDevice(savedDevice);
 
-    // Load available input devices
-    if (window.pitwall?.getInputDevices) {
-      window.pitwall.getInputDevices().then(devices => {
-        setInputDevices(devices || []);
-      });
+    // Load available input devices from browser API (works in Electron)
+    async function loadDevices() {
+      try {
+        // Request permission first (triggers browser prompt if needed)
+        await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => s.getTracks().forEach(t => t.stop()));
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices
+          .filter(d => d.kind === 'audioinput')
+          .map((d, i) => ({
+            index: d.deviceId,
+            name: d.label || `Microphone ${i + 1}`,
+            default: d.deviceId === 'default',
+          }));
+        setInputDevices(audioInputs);
+      } catch (e) {
+        console.warn('Could not enumerate audio devices:', e);
+      }
     }
+    loadDevices();
 
     // Load app version
     if (window.pitwall?.getAppVersion) {
@@ -126,8 +139,8 @@ function SettingsPanel({ onClose }) {
         toggleOverlay,
       });
       await window.pitwall.setTelemetryWindow(telemetryWindow);
-      if (inputDevice !== '') {
-        await window.pitwall.setInputDevice(parseInt(inputDevice, 10));
+      if (inputDevice && inputDevice !== '') {
+        await window.pitwall.setInputDevice(inputDevice);
       }
       if (result.success) {
         setStatus('✓ Settings saved');

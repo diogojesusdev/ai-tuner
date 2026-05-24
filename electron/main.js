@@ -596,30 +596,37 @@ ipcMain.handle('save-tune', async (event, { vehicleId, data }) => {
 });
 
 ipcMain.handle('get-input-devices', async () => {
-  if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
-    return [];
+  // Try getting devices from Python backend first
+  if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+    const backendDevices = await new Promise((resolve) => {
+      const handler = (data) => {
+        try {
+          const msg = JSON.parse(data.toString());
+          if (msg.type === 'INPUT_DEVICES') {
+            wsConnection.off('message', handler);
+            resolve(msg.data);
+          }
+        } catch {}
+      };
+      wsConnection.on('message', handler);
+      sendToBackend('GET_INPUT_DEVICES', {});
+      setTimeout(() => {
+        wsConnection.off('message', handler);
+        resolve([]);
+      }, 2000);
+    });
+    if (backendDevices.length > 0) return backendDevices;
   }
-  return new Promise((resolve) => {
-    const handler = (data) => {
-      try {
-        const msg = JSON.parse(data.toString());
-        if (msg.type === 'INPUT_DEVICES') {
-          wsConnection.off('message', handler);
-          resolve(msg.data);
-        }
-      } catch {}
-    };
-    wsConnection.on('message', handler);
-    sendToBackend('GET_INPUT_DEVICES', {});
-    setTimeout(() => {
-      wsConnection.off('message', handler);
-      resolve([]);
-    }, 2000);
-  });
+  // Fallback: enumerate from Electron renderer via system
+  return '__use_browser_api__';
 });
 
 ipcMain.handle('set-input-device', async (event, { deviceIndex }) => {
   sendToBackend('SET_INPUT_DEVICE', { device_index: deviceIndex });
+  // Also store for renderer-side use
+  if (mainWindow) {
+    mainWindow.webContents.send('input-device-changed', { deviceId: deviceIndex });
+  }
   return { success: true };
 });
 
