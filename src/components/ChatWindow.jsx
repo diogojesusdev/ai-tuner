@@ -48,9 +48,9 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage 
   };
 
   return (
-    <div className="glass-panel h-full flex flex-col">
+    <div className="glass-panel h-full flex flex-col rounded-none border-x-0">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-800/50 flex items-center gap-2">
+      <div className="px-4 py-2 border-b border-gray-800/50 flex items-center gap-2">
         <MessageCircle size={16} className="text-pit-accent" />
         <span className="text-sm font-medium text-gray-200">Race Engineer</span>
         <div className="ml-auto flex items-center gap-1">

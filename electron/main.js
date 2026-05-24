@@ -46,13 +46,16 @@ function createWindow() {
   const isDev = !app.isPackaged;
 
   mainWindow = new BrowserWindow({
-    width: 1920,
-    height: 1080,
+    width: 500,
+    height: 700,
+    x: 50,
+    y: 50,
     transparent: true,
     frame: false,
     hasShadow: false,
-    skipTaskbar: true,
-    resizable: false,
+    alwaysOnTop: true,
+    resizable: true,
+    minimizable: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -61,9 +64,6 @@ function createWindow() {
   });
 
   mainWindow.setAlwaysOnTop(true, 'floating');
-
-  // Start in overlay mode (click-through)
-  mainWindow.setIgnoreMouseEvents(true);
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173').catch(() => {
@@ -286,22 +286,9 @@ ipcMain.handle('get-pending-changes', async () => {
 
 // ============ App Lifecycle ============
 
-function setInteractMode(enabled) {
-  if (!mainWindow) return;
-  interactMode = enabled;
-  mainWindow.setIgnoreMouseEvents(!enabled);
-  mainWindow.webContents.send('interact-mode', { enabled });
-  console.log(`[Overlay] Interact mode: ${enabled ? 'ON (click UI)' : 'OFF (click-through)'}`);
-}
-
 app.whenReady().then(() => {
   createWindow();
   connectWebSocket();
-
-  // F9: Toggle interact mode (click UI vs pass-through)
-  globalShortcut.register('F9', () => {
-    setInteractMode(!interactMode);
-  });
 
   // F10: Toggle overlay visibility
   globalShortcut.register('F10', () => {
@@ -311,7 +298,7 @@ app.whenReady().then(() => {
       mainWindow.show();
       mainWindow.setAlwaysOnTop(true, 'floating');
     } else {
-      mainWindow.hide();
+      mainWindow.minimize();
     }
   });
 
