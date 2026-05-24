@@ -287,23 +287,26 @@ class AITunerBackend:
                 except websockets.exceptions.ConnectionClosed:
                     pass
         else:
-            # Send error/status feedback to Electron so user knows what happened
+            # Only show errors to the user if recording was held for a meaningful duration (>3s)
+            # Short taps are accidental and should be silently ignored
             error_msg = result.error or "No speech detected"
-            print(f"[STT] Failed: {error_msg}")
-            message = json.dumps({
-                "type": "VOICE_ERROR",
-                "data": {
-                    "error": error_msg,
-                    "audio_duration": result.audio_duration,
-                    "audio_level": result.audio_level,
-                    "timestamp": time.time(),
-                }
-            })
-            for client in self.ws_clients.copy():
-                try:
-                    await client.send(message)
-                except websockets.exceptions.ConnectionClosed:
-                    pass
+            duration = result.audio_duration or 0
+            if duration >= 3.0:
+                print(f"[STT] Failed: {error_msg}")
+                message = json.dumps({
+                    "type": "VOICE_ERROR",
+                    "data": {
+                        "error": error_msg,
+                        "audio_duration": result.audio_duration,
+                        "audio_level": result.audio_level,
+                        "timestamp": time.time(),
+                    }
+                })
+                for client in self.ws_clients.copy():
+                    try:
+                        await client.send(message)
+                    except websockets.exceptions.ConnectionClosed:
+                        pass
 
     async def _broadcast_listening_state(self, is_listening: bool):
         """Notify connected clients about PTT listening state."""
