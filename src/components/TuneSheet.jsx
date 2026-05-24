@@ -260,14 +260,14 @@ function TuneSheet({ vehicleId }) {
             className="p-1 rounded text-gray-500 hover:text-pit-info transition-colors"
             title="Import tune from JSON"
           >
-            <Upload size={12} />
+            <Download size={12} />
           </button>
           <button
             onClick={handleExport}
             className="p-1 rounded text-gray-500 hover:text-pit-info transition-colors"
             title="Export current tune as JSON"
           >
-            <Download size={12} />
+            <Upload size={12} />
           </button>
           <button
             onClick={toggleLibrary}

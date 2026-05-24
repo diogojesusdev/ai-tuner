@@ -68,7 +68,7 @@ Store car_name, discipline, and hp_tier via tune_updates when confirmed.
 IMPORTANT: Do NOT bundle multiple questions. Ask one thing at a time. Keep all replies in this state extremely short (1-2 sentences max).
 
 ### COLLECTING_DATA  
-The driver is actively driving to build up telemetry history. When entering this state, give them a SPECIFIC short driving task based on their discipline so the telemetry is diagnostic:
+The driver explicitly asked for help and you need telemetry data. Only enter this state when the user asks you to analyze their driving or help tune. Give them a SPECIFIC short driving task based on their discipline so the telemetry is diagnostic:
 - **Racing**: "Do 2-3 laps at your normal pace — include a heavy braking zone and a fast sweeper."
 - **Drifting**: "Do 2-3 initiations, a transition, and one sustained corner — I need to see slip angles and weight transfer."
 - **Rally**: "Hit a rough section and a fast corner on loose surface — I need suspension and traction data."
@@ -78,11 +78,13 @@ The driver is actively driving to build up telemetry history. When entering this
 If you need more specific data later (e.g., gear ratios, or suspension response over bumps), you can ask the driver to perform a targeted mini-test like: "Floor it in 2nd and shift through all gears" or "Take that corner flat to see if the rear steps out". Keep requests simple and brief — one sentence.
 
 ### READY
-You have sufficient telemetry data. You can now:
-- Proactively offer observations about the car's behavior based on the telemetry
-- Wait for the driver to describe issues  
-- Suggest relative adjustments when asked
-Always reference the telemetry data to justify your suggestions (tire temps, slip ratios, suspension bottoming, G-forces, input patterns).
+You have sufficient telemetry data OR you're standing by. IMPORTANT RULES:
+- Do NOT proactively comment on telemetry or offer unsolicited observations
+- ALWAYS wait for the driver to describe their issue or ask for help first
+- When the driver reports a problem, ask clarifying questions about what they FEEL before looking at data
+- Only reference telemetry to CONFIRM or diagnose what the driver described — never to raise new issues they didn't mention
+- If asked to "analyze" or "check telemetry", ask: "What's bothering you about the car right now?" before diving into data
+- The driver knows how their car feels — your job is to translate their feedback into adjustments, using telemetry as supporting evidence
 
 ### SUGGESTING
 You've proposed changes. Wait for the driver to confirm what they applied.
@@ -304,15 +306,14 @@ async function onCarChanged(vehicleId) {
   await new Promise(resolve => setTimeout(resolve, 500));
   
   if (currentCarMemory && currentCarMemory.car_name) {
-    // Car already identified — check if we have tune data
+    // Car already identified — go to READY and wait for user to ask
     carIdentified = true;
-    dataCollectionStart = Date.now();
-    setAgentState(AGENT_STATES.COLLECTING_DATA);
+    setAgentState(AGENT_STATES.READY);
     
     // Notify UI
     if (mainWindow) {
       mainWindow.webContents.send('ai-response', {
-        reply: `Recognized: ${currentCarMemory.car_name} (${currentCarMemory.discipline || 'unknown discipline'}). Drive for a bit so I can read your telemetry.`,
+        reply: `Recognized: ${currentCarMemory.car_name} (${currentCarMemory.discipline || 'unknown discipline'}). What can I help you with?`,
         pending_changes: [],
       });
     }
@@ -492,9 +493,9 @@ function handleAIResponse(text) {
     }
   }
 
-  // If LLM provided tune updates, save and notify UI
+  // If LLM provided tune updates, only save identity fields immediately.
+  // Actual tune values are saved only when user confirms (UPDATING_TUNE state).
   if (parsed.tune_updates && Object.keys(parsed.tune_updates).length > 0) {
-    // Separate identity fields from actual tune values
     const identityKeys = ['car_name', 'discipline', 'hp_tier'];
     const tuneOnly = {};
     const identityUpdates = {};
@@ -506,8 +507,8 @@ function handleAIResponse(text) {
       }
     }
 
-    // Save tune values (without identity fields mixed in)
-    if (Object.keys(tuneOnly).length > 0) {
+    // Only save actual tune values when in UPDATING_TUNE state (user confirmed they applied changes)
+    if (Object.keys(tuneOnly).length > 0 && agentState === AGENT_STATES.UPDATING_TUNE) {
       sendToBackend('UPDATE_CAR_MEMORY', {
         vehicle_id: currentVehicleId,
         updates: { tune: tuneOnly },
@@ -517,7 +518,7 @@ function handleAIResponse(text) {
       }
     }
 
-    // Save identity fields at car level
+    // Save identity fields at car level (always OK — these are facts, not suggestions)
     if (Object.keys(identityUpdates).length > 0) {
       sendToBackend('UPDATE_CAR_MEMORY', {
         vehicle_id: currentVehicleId,
