@@ -440,7 +440,7 @@ function App() {
               }`}
             >
               <History size={12} />
-              Sessions
+              AI Sessions
             </button>
             {/* Agent state pill */}
             <div className="ml-auto">
@@ -484,10 +484,10 @@ function App() {
             {activeTab === 'sessions' && (
               <div className="h-full flex flex-col">
                 <div className="px-4 py-2 border-b border-gray-800/50 flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-200">Sessions</span>
+                  <span className="text-sm font-medium text-gray-200">AI Engineer Sessions</span>
                   {sessions.length > 0 && (
                     <button
-                      onClick={() => { if (confirm('Delete all sessions?')) deleteAllSessions(); }}
+                      onClick={() => { if (confirm('Delete all chat sessions? Your car tunes will NOT be affected.')) deleteAllSessions(); }}
                       className="ml-auto flex items-center gap-1 px-2 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 text-[10px] transition-colors"
                       title="Delete all sessions"
                     >
