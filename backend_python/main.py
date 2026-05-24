@@ -407,19 +407,50 @@ class AITunerBackend:
             print(f"[Hotkey] Failed to save PTT key: {e}")
 
     def _get_input_devices(self) -> list:
-        """List available audio input devices."""
+        """List available audio input devices (deduplicated, WASAPI preferred)."""
         try:
             import sounddevice as sd
             devices = sd.query_devices()
+            hostapis = sd.query_hostapis()
+
+            # Find WASAPI host API index (preferred on Windows)
+            wasapi_idx = None
+            for idx, api in enumerate(hostapis):
+                if 'WASAPI' in api.get('name', ''):
+                    wasapi_idx = idx
+                    break
+
             input_devices = []
-            for i, d in enumerate(devices):
-                if d['max_input_channels'] > 0:
-                    input_devices.append({
-                        "index": i,
-                        "name": d['name'],
-                        "channels": d['max_input_channels'],
-                        "default": i == sd.default.device[0],
-                    })
+            seen_names = set()
+
+            # First pass: WASAPI devices (preferred)
+            if wasapi_idx is not None:
+                for i, d in enumerate(devices):
+                    if d['max_input_channels'] > 0 and d.get('hostapi') == wasapi_idx:
+                        name = d['name'].strip()
+                        if name not in seen_names:
+                            seen_names.add(name)
+                            input_devices.append({
+                                "index": i,
+                                "name": name,
+                                "channels": d['max_input_channels'],
+                                "default": i == sd.default.device[0],
+                            })
+
+            # Fallback: if no WASAPI or no devices found, use all but deduplicate
+            if not input_devices:
+                for i, d in enumerate(devices):
+                    if d['max_input_channels'] > 0:
+                        name = d['name'].strip()
+                        if name not in seen_names:
+                            seen_names.add(name)
+                            input_devices.append({
+                                "index": i,
+                                "name": name,
+                                "channels": d['max_input_channels'],
+                                "default": i == sd.default.device[0],
+                            })
+
             return input_devices
         except ImportError:
             print("[Audio] sounddevice not installed, cannot list devices.")
