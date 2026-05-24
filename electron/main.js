@@ -5,11 +5,13 @@
 
 const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
 const path = require('path');
+const { spawn } = require('child_process');
 const WebSocket = require('ws');
 const { GoogleGenAI } = require('@google/genai');
 
 let mainWindow = null;
 let wsConnection = null;
+let backendProcess = null;
 let overlayVisible = true;
 let genaiClient = null;
 let chatSession = null;
@@ -376,16 +378,53 @@ function registerShortcuts() {
   }
 }
 
+// ============ Python Backend Management ============
+
+function startBackend() {
+  const backendDir = path.join(__dirname, '..', 'backend_python');
+  backendProcess = spawn('python', ['main.py'], {
+    cwd: backendDir,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+  });
+
+  backendProcess.stdout.on('data', (data) => {
+    process.stdout.write(`[Backend] ${data}`);
+  });
+
+  backendProcess.stderr.on('data', (data) => {
+    process.stderr.write(`[Backend ERR] ${data}`);
+  });
+
+  backendProcess.on('exit', (code) => {
+    console.log(`[Backend] Process exited with code ${code}`);
+    backendProcess = null;
+  });
+
+  console.log('[Backend] Python backend started (PID:', backendProcess.pid, ')');
+}
+
+function stopBackend() {
+  if (backendProcess && !backendProcess.killed) {
+    console.log('[Backend] Stopping Python backend...');
+    backendProcess.kill();
+    backendProcess = null;
+  }
+}
+
 // ============ App Lifecycle ============
 
 app.whenReady().then(() => {
+  startBackend();
   createWindow();
-  connectWebSocket();
+  // Give backend a moment to start before connecting
+  setTimeout(connectWebSocket, 2000);
   registerShortcuts();
 });
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  stopBackend();
 });
 
 app.on('window-all-closed', () => {

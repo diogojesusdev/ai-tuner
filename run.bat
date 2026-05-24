@@ -24,12 +24,5 @@ echo [*] Building frontend...
 call npx vite build
 echo.
 
-echo [1/2] Starting Python backend...
-start "PitWall Backend" cmd /k "cd backend_python && python main.py"
-
-echo [2/2] Starting Electron overlay...
-timeout /t 3 /nobreak >nul
-start "PitWall Overlay" cmd /k "npx electron ."
-
-echo.
-echo PitWall is running. Close both windows to stop.
+echo [*] Launching PitWall (backend starts automatically)...
+npx electron .
