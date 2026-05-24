@@ -52,6 +52,11 @@ You are given a "current_state" in every message. Follow the protocol for that s
 
 ### IDENTIFY_CAR
 The system detected a new car (vehicle_id provided). Ask the driver to confirm the car name and what discipline they'll be driving (racing, drifting, rally, or drag). Keep it brief — they're in-game.
+If the discipline is **drifting**, you MUST also ask what power tier the build is:
+- Low HP (250–400 hp)
+- Mid HP (400–700 hp)
+- High HP (700+ hp)
+This affects your tuning approach significantly (e.g., differential, spring rates, tire pressure strategy differ drastically between tiers). Store this as "hp_tier" via tune_updates.
 
 ### COLLECTING_DATA  
 The driver is actively driving to build up telemetry history. Acknowledge this, tell them you're watching, and let them know when you have enough data. You can answer brief questions but don't suggest tune changes yet.
@@ -360,6 +365,7 @@ function buildContextPayload(userText) {
     payload.car_memory = {
       car_name: currentCarMemory.car_name || null,
       discipline: currentCarMemory.discipline || null,
+      hp_tier: currentCarMemory.hp_tier || null,
       tune: currentCarMemory.tune || {},
       past_modifications: (currentCarMemory.past_modifications || []).slice(-10),
     };
@@ -408,11 +414,12 @@ function handleAIResponse(text) {
   }
 
   // If LLM identified the car (user_input_request of type car_identity was fulfilled)
-  if (parsed.tune_updates && (parsed.tune_updates.car_name || parsed.tune_updates.discipline)) {
+  if (parsed.tune_updates && (parsed.tune_updates.car_name || parsed.tune_updates.discipline || parsed.tune_updates.hp_tier)) {
     // Save car identity
     const updates = {};
     if (parsed.tune_updates.car_name) updates.car_name = parsed.tune_updates.car_name;
     if (parsed.tune_updates.discipline) updates.discipline = parsed.tune_updates.discipline;
+    if (parsed.tune_updates.hp_tier) updates.hp_tier = parsed.tune_updates.hp_tier;
     sendToBackend('UPDATE_CAR_MEMORY', { vehicle_id: currentVehicleId, updates });
   }
 
