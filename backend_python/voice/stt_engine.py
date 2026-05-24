@@ -31,7 +31,7 @@ class STTEngine:
     Records audio on push-to-talk and returns transcription.
     """
 
-    def __init__(self, model_size: str = "base", device: str = "auto"):
+    def __init__(self, model_size: str = "small", device: str = "auto"):
         self.model_size = model_size
         self.device = device
         self.model = None

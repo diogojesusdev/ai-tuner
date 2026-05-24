@@ -9,7 +9,7 @@
     "port": 8765
   },
   "voice": {
-    "stt_model": "base",
+    "stt_model": "small",
     "stt_device": "auto",
     "tts_rate": 180,
     "tts_voice_index": 0,

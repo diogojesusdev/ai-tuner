@@ -99,7 +99,7 @@ function SettingsPanel({ onClose }) {
   const [pttKey, setPttKey] = useState('caps_lock');
   const [inputDevice, setInputDevice] = useState('');
   const [inputDevices, setInputDevices] = useState([]);
-  const [sttModel, setSttModel] = useState('base');
+  const [sttModel, setSttModel] = useState('small');
   const [toggleOverlay, setToggleOverlay] = useState('F10');
   const [telemetryWindow, setTelemetryWindow] = useState(5);
   const [status, setStatus] = useState('');
@@ -115,7 +115,7 @@ function SettingsPanel({ onClose }) {
     const savedToggle = localStorage.getItem('pitwall_shortcut_toggle') || 'F10';
     const savedWindow = localStorage.getItem('pitwall_telemetry_window') || '5';
     const savedDevice = localStorage.getItem('pitwall_input_device') || '';
-    const savedSttModel = localStorage.getItem('pitwall_stt_model') || 'base';
+    const savedSttModel = localStorage.getItem('pitwall_stt_model') || 'small';
     setApiKey(savedKey);
     setModel(savedModel);
     setPttKey(savedPtt);
