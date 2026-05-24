@@ -77,16 +77,22 @@ function App() {
     await window.pitwall.sendMessage(text);
   }, []);
 
-  const handleMouseEnter = useCallback(() => {
-    if (window.pitwall) {
-      window.pitwall.setClickThrough(false);
-    }
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    if (window.pitwall) {
-      window.pitwall.setClickThrough(true);
-    }
+  // Document-level detection: when Electron forwards mouse events over
+  // non-transparent pixels, the document receives mouseenter/mouseleave.
+  // This toggles click-through so clicks land on panels vs pass to the game.
+  useEffect(() => {
+    const onEnter = () => {
+      if (window.pitwall) window.pitwall.setClickThrough(false);
+    };
+    const onLeave = () => {
+      if (window.pitwall) window.pitwall.setClickThrough(true);
+    };
+    document.documentElement.addEventListener('mouseenter', onEnter);
+    document.documentElement.addEventListener('mouseleave', onLeave);
+    return () => {
+      document.documentElement.removeEventListener('mouseenter', onEnter);
+      document.documentElement.removeEventListener('mouseleave', onLeave);
+    };
   }, []);
 
   return (
@@ -98,12 +104,7 @@ function App() {
 
       {/* Chat Window - Right Side */}
       {showChat && (
-        <div
-          className="absolute top-4 right-4 bottom-4 w-96"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          style={{ pointerEvents: 'auto' }}
-        >
+        <div className="absolute top-4 right-4 bottom-4 w-96">
           <ChatWindow
             messages={messages}
             pendingChanges={pendingChanges}
@@ -114,12 +115,7 @@ function App() {
       )}
 
       {/* Settings Button - Top Left */}
-      <div
-        className="absolute top-4 left-4"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        style={{ pointerEvents: 'auto' }}
-      >
+      <div className="absolute top-4 left-4">
         <button
           onClick={() => setShowSettings(!showSettings)}
           className="glass-panel p-2 hover:border-pit-accent transition-colors"
@@ -142,12 +138,7 @@ function App() {
 
       {/* Settings Panel */}
       {showSettings && (
-        <div
-          className="absolute top-16 left-4 w-80"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          style={{ pointerEvents: 'auto' }}
-        >
+        <div className="absolute top-16 left-4 w-80">
           <SettingsPanel onClose={() => setShowSettings(false)} />
         </div>
       )}
