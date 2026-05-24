@@ -104,7 +104,7 @@ You MUST reply as JSON:
 ## Field Definitions
 - "reply": Natural language response (always required)
 - "pending_changes": Array of suggested adjustments (empty if none). Each has a unique "id" and "action" string. When you know the current value, ALWAYS include the resulting value in the action like: "Increase rear tire pressure by +0.3 Bar (2.4 → 2.7)". This saves the driver from doing mental math.
-- "tune_updates": Object mapping tune keys to new absolute values. Only include when you KNOW the absolute value. Keys: tire_pressure_fl, tire_pressure_fr, tire_pressure_rl, tire_pressure_rr, camber_fl, camber_fr, camber_rl, camber_rr, toe_fl, toe_fr, toe_rl, toe_rr, spring_front, spring_rear, ride_height_front, ride_height_rear, bump_front, bump_rear, rebound_front, rebound_rear, arb_front, arb_rear, aero_front, aero_rear, brake_balance, brake_pressure, diff_accel, diff_decel, final_drive.
+- "tune_updates": Object mapping tune keys to new absolute values. Only include when you KNOW the absolute value. IMPORTANT: "front" means BOTH FL and FR keys, "rear" means BOTH RL and RR keys — always set both sides. Keys: tire_pressure_fl, tire_pressure_fr, tire_pressure_rl, tire_pressure_rr, camber_fl, camber_fr, camber_rl, camber_rr, toe_fl, toe_fr, toe_rl, toe_rr, spring_front, spring_rear, ride_height_front, ride_height_rear, bump_front, bump_rear, rebound_front, rebound_rear, arb_front, arb_rear, aero_front, aero_rear, brake_balance, brake_pressure, diff_accel, diff_decel, final_drive.
 - "next_state": Suggest what state the agent should transition to. Options: IDENTIFY_CAR, COLLECTING_DATA, READY, SUGGESTING, UPDATING_TUNE.
 - "user_input_request": When you need structured input from the user. "type" indicates what kind of data you need. Types: "discipline" (shows racing/drifting/rally/drag buttons), "hp_tier" (shows low/mid/high HP buttons), "car_identity" (ask for car name), "tune_values" (ask for tune fields), "go_test" (shows a "Go test!" button — use this when telling the driver to go back on track to test changes), "confirmation", "freeform". "fields" lists the specific tune keys if requesting tune values.
 
@@ -426,23 +426,36 @@ function handleAIResponse(text) {
 
   // If LLM provided tune updates, save and notify UI
   if (parsed.tune_updates && Object.keys(parsed.tune_updates).length > 0) {
-    sendToBackend('UPDATE_CAR_MEMORY', {
-      vehicle_id: currentVehicleId,
-      updates: { tune: parsed.tune_updates },
-    });
-    if (mainWindow) {
-      mainWindow.webContents.send('tune-update', { tune: parsed.tune_updates });
+    // Separate identity fields from actual tune values
+    const identityKeys = ['car_name', 'discipline', 'hp_tier'];
+    const tuneOnly = {};
+    const identityUpdates = {};
+    for (const [key, val] of Object.entries(parsed.tune_updates)) {
+      if (identityKeys.includes(key)) {
+        identityUpdates[key] = val;
+      } else {
+        tuneOnly[key] = val;
+      }
     }
-  }
 
-  // If LLM identified the car (user_input_request of type car_identity was fulfilled)
-  if (parsed.tune_updates && (parsed.tune_updates.car_name || parsed.tune_updates.discipline || parsed.tune_updates.hp_tier)) {
-    // Save car identity
-    const updates = {};
-    if (parsed.tune_updates.car_name) updates.car_name = parsed.tune_updates.car_name;
-    if (parsed.tune_updates.discipline) updates.discipline = parsed.tune_updates.discipline;
-    if (parsed.tune_updates.hp_tier) updates.hp_tier = parsed.tune_updates.hp_tier;
-    sendToBackend('UPDATE_CAR_MEMORY', { vehicle_id: currentVehicleId, updates });
+    // Save tune values (without identity fields mixed in)
+    if (Object.keys(tuneOnly).length > 0) {
+      sendToBackend('UPDATE_CAR_MEMORY', {
+        vehicle_id: currentVehicleId,
+        updates: { tune: tuneOnly },
+      });
+      if (mainWindow) {
+        mainWindow.webContents.send('tune-update', { tune: tuneOnly });
+      }
+    }
+
+    // Save identity fields at car level
+    if (Object.keys(identityUpdates).length > 0) {
+      sendToBackend('UPDATE_CAR_MEMORY', {
+        vehicle_id: currentVehicleId,
+        updates: identityUpdates,
+      });
+    }
   }
 
   // Send response to renderer
