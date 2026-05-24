@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Key, Cpu, Save, Mic, Keyboard, Download, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Key, Cpu, Mic, Keyboard, Download, RefreshCw } from 'lucide-react';
 
 /**
  * SettingsPanel - Full-page settings view.
@@ -42,7 +42,6 @@ function SettingsPanel({ onClose }) {
   const [toggleOverlay, setToggleOverlay] = useState('F10');
   const [telemetryWindow, setTelemetryWindow] = useState(5);
   const [status, setStatus] = useState('');
-  const [saving, setSaving] = useState(false);
   const [appVersion, setAppVersion] = useState('');
   const [updateStatus, setUpdateStatus] = useState(''); // '', 'checking', 'available', 'downloading', 'ready', 'uptodate'
   const [updateVersion, setUpdateVersion] = useState('');
@@ -114,45 +113,38 @@ function SettingsPanel({ onClose }) {
     }
   };
 
-  const handleSave = async () => {
-    if (!apiKey.trim()) {
-      setStatus('Please enter an API key');
-      return;
-    }
+  // Auto-save on any setting change
+  useEffect(() => {
+    // Skip initial mount (settings are loading from localStorage)
+    const timeout = setTimeout(async () => {
+      // Save to localStorage
+      localStorage.setItem('pitwall_api_key', apiKey);
+      localStorage.setItem('pitwall_model', model);
+      localStorage.setItem('pitwall_ptt_key', pttKey);
+      localStorage.setItem('pitwall_shortcut_toggle', toggleOverlay);
+      localStorage.setItem('pitwall_telemetry_window', String(telemetryWindow));
+      localStorage.setItem('pitwall_input_device', inputDevice);
 
-    setSaving(true);
-    setStatus('Saving...');
-
-    // Save to localStorage
-    localStorage.setItem('pitwall_api_key', apiKey);
-    localStorage.setItem('pitwall_model', model);
-    localStorage.setItem('pitwall_ptt_key', pttKey);
-    localStorage.setItem('pitwall_shortcut_toggle', toggleOverlay);
-    localStorage.setItem('pitwall_telemetry_window', String(telemetryWindow));
-    localStorage.setItem('pitwall_input_device', inputDevice);
-
-    // Send to Electron main process
-    if (window.pitwall) {
-      const result = await window.pitwall.setApiKey(apiKey, model);
-      await window.pitwall.setPttKey(pttKey);
-      await window.pitwall.setShortcuts({
-        toggleOverlay,
-      });
-      await window.pitwall.setTelemetryWindow(telemetryWindow);
-      if (inputDevice && inputDevice !== '') {
-        await window.pitwall.setInputDevice(inputDevice);
+      // Send to Electron main process
+      if (window.pitwall && apiKey.trim()) {
+        const result = await window.pitwall.setApiKey(apiKey, model);
+        await window.pitwall.setPttKey(pttKey);
+        await window.pitwall.setShortcuts({ toggleOverlay });
+        await window.pitwall.setTelemetryWindow(telemetryWindow);
+        if (inputDevice && inputDevice !== '') {
+          await window.pitwall.setInputDevice(inputDevice);
+        }
+        if (result.success) {
+          setStatus('✓ Saved');
+        } else {
+          setStatus('✗ Failed to connect to Gemini. Check your key.');
+        }
       }
-      if (result.success) {
-        setStatus('✓ Settings saved');
-      } else {
-        setStatus('✗ Failed to connect to Gemini. Check your key.');
-      }
-    } else {
-      setStatus('✓ Settings saved (dev mode)');
-    }
+      setTimeout(() => setStatus(''), 2000);
+    }, 500); // debounce 500ms
 
-    setSaving(false);
-  };
+    return () => clearTimeout(timeout);
+  }, [apiKey, model, pttKey, toggleOverlay, telemetryWindow, inputDevice]);
 
   const formatShortcutLabel = (s) => {
     return s.replace('CommandOrControl+', 'Ctrl+').replace('Alt+', 'Alt+');
@@ -290,16 +282,6 @@ function SettingsPanel({ onClose }) {
             </div>
           </div>
         </section>
-
-        {/* Save Button */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-md bg-pit-accent/20 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/30 disabled:opacity-50 transition-colors text-xs font-medium"
-        >
-          <Save size={12} />
-          {saving ? 'Saving...' : 'Save Settings'}
-        </button>
 
         {/* Status */}
         {status && (
