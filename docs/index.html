@@ -128,6 +128,25 @@
       line-height: 1.6;
     }
 
+    .discipline-pills {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 2.5rem;
+    }
+
+    .pill {
+      padding: 0.4rem 0.9rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--gray-light);
+      letter-spacing: 0.01em;
+    }
+
     .cta-group {
       display: flex;
       gap: 1rem;
@@ -482,6 +501,14 @@
       <p class="subtitle">
         AI Tuner learns how <em>you</em> drive and builds a tune around your playstyle. Tell it what feels off, and it combines your feedback with live telemetry to suggest changes tailored to the way you attack corners — not some generic setup from the internet.
       </p>
+      <div class="discipline-pills">
+        <span class="pill">🏎️ Grip Racing</span>
+        <span class="pill">🚗💨 Drifting</span>
+        <span class="pill">⛰️ Touge</span>
+        <span class="pill">🌲 Rally</span>
+        <span class="pill">🏁 Drag</span>
+        <span class="pill">🌃 Street Racing</span>
+      </div>
       <div class="cta-group">
         <a href="https://github.com/diogojesusdev/ai-tuner/releases/latest" class="btn btn-primary">
           ⬇ Download for Windows
