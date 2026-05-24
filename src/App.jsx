@@ -3,7 +3,7 @@ import TelemetryHUD from './components/TelemetryHUD';
 import ChatWindow from './components/ChatWindow';
 import TuneSheet from './components/TuneSheet';
 import SettingsPanel from './components/SettingsPanel';
-import { Settings, GripVertical, MessageCircle, Wrench, X, Square } from 'lucide-react';
+import { Settings, GripVertical, MessageCircle, Wrench, X, Square, History, Plus } from 'lucide-react';
 
 const STATE_LABELS = {
   IDLE: { text: 'Idle', color: 'text-gray-500' },
@@ -51,11 +51,105 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'tune'
+  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'tune' | 'sessions'
   const [vehicleId, setVehicleId] = useState(null);
   const [agentState, setAgentState] = useState('IDLE');
   const [carName, setCarName] = useState(null);
   const [quickActions, setQuickActions] = useState([]);
+
+  // Session management
+  const [sessions, setSessions] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('pitwall_sessions') || '[]');
+    } catch { return []; }
+  });
+  const [activeSessionId, setActiveSessionId] = useState(() => {
+    return localStorage.getItem('pitwall_active_session') || null;
+  });
+
+  // Persist sessions list to localStorage
+  useEffect(() => {
+    localStorage.setItem('pitwall_sessions', JSON.stringify(sessions));
+  }, [sessions]);
+
+  // Persist active session ID
+  useEffect(() => {
+    if (activeSessionId) {
+      localStorage.setItem('pitwall_active_session', activeSessionId);
+    }
+  }, [activeSessionId]);
+
+  // Auto-save messages into active session (debounced)
+  useEffect(() => {
+    if (!activeSessionId || messages.length === 0) return;
+    const timeout = setTimeout(() => {
+      setSessions((prev) => prev.map((s) =>
+        s.id === activeSessionId
+          ? { ...s, messages, carName: carName || s.carName, updatedAt: Date.now() }
+          : s
+      ));
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [messages, activeSessionId, carName]);
+
+  // Create or switch session when car changes
+  const switchToSession = useCallback((sessionId) => {
+    // Save current messages before switching
+    if (activeSessionId && messages.length > 0) {
+      setSessions((prev) => prev.map((s) =>
+        s.id === activeSessionId
+          ? { ...s, messages, carName: carName || s.carName, updatedAt: Date.now() }
+          : s
+      ));
+    }
+    // Load target session
+    setActiveSessionId(sessionId);
+    const target = sessions.find((s) => s.id === sessionId);
+    if (target) {
+      setMessages(target.messages || []);
+      setCarName(target.carName || null);
+      setVehicleId(target.vehicleId || null);
+      setPendingChanges([]);
+      setQuickActions([]);
+    }
+  }, [activeSessionId, messages, carName, sessions]);
+
+  const createNewSession = useCallback((name, vehId) => {
+    const id = `session_${Date.now()}`;
+    const newSession = {
+      id,
+      carName: name || null,
+      vehicleId: vehId || null,
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    // Save current session first
+    if (activeSessionId && messages.length > 0) {
+      setSessions((prev) => prev.map((s) =>
+        s.id === activeSessionId
+          ? { ...s, messages, carName: carName || s.carName, updatedAt: Date.now() }
+          : s
+      ));
+    }
+    setSessions((prev) => [newSession, ...prev]);
+    setActiveSessionId(id);
+    setMessages([]);
+    setPendingChanges([]);
+    setQuickActions([]);
+    setCarName(name || null);
+    setVehicleId(vehId || null);
+    return id;
+  }, [activeSessionId, messages, carName]);
+
+  const deleteSession = useCallback((sessionId) => {
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    if (activeSessionId === sessionId) {
+      setActiveSessionId(null);
+      setMessages([]);
+      setCarName(null);
+    }
+  }, [activeSessionId]);
 
   // Auto-open settings if no API key is configured
   useEffect(() => {
@@ -68,6 +162,18 @@ function App() {
     }
   }, []);
 
+  // Load active session on startup
+  useEffect(() => {
+    if (activeSessionId) {
+      const session = sessions.find((s) => s.id === activeSessionId);
+      if (session) {
+        setMessages(session.messages || []);
+        setCarName(session.carName || null);
+        setVehicleId(session.vehicleId || null);
+      }
+    }
+  }, []); // Only on mount
+
   useEffect(() => {
     if (!window.pitwall) return;
 
@@ -76,6 +182,16 @@ function App() {
       if (!telemetryActive) setTelemetryActive(true);
       if (data.vehicle_id && data.vehicle_id !== vehicleId) {
         setVehicleId(data.vehicle_id);
+        // Check if there's an existing session for this vehicle
+        const existing = sessions.find((s) => s.vehicleId === data.vehicle_id);
+        if (existing) {
+          if (existing.id !== activeSessionId) {
+            switchToSession(existing.id);
+          }
+        } else {
+          // Auto-create new session for new vehicle
+          createNewSession(null, data.vehicle_id);
+        }
       }
     });
 
@@ -185,12 +301,16 @@ function App() {
 
   const handleSendMessage = useCallback(async (text, images) => {
     if (!window.pitwall) return;
+    // Auto-create session if none active
+    if (!activeSessionId) {
+      createNewSession(carName, vehicleId);
+    }
     setMessages((prev) => [
       ...prev,
       { role: 'user', text, images, timestamp: Date.now() / 1000 },
     ]);
     await window.pitwall.sendMessage(text, images);
-  }, []);
+  }, [activeSessionId, carName, vehicleId, createNewSession]);
 
   const handleQuickAction = useCallback(async (value) => {
     setQuickActions([]);
@@ -261,7 +381,7 @@ function App() {
               }`}
             >
               <MessageCircle size={12} />
-              Engineer
+              AI Engineer
             </button>
             <button
               onClick={() => setActiveTab('tune')}
@@ -273,6 +393,17 @@ function App() {
             >
               <Wrench size={12} />
               Tune
+            </button>
+            <button
+              onClick={() => setActiveTab('sessions')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-b-2 transition-colors ${
+                activeTab === 'sessions'
+                  ? 'border-pit-accent text-pit-accent'
+                  : 'border-transparent text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <History size={12} />
+              Sessions
             </button>
             {/* Agent state pill */}
             <div className="ml-auto">
@@ -286,7 +417,7 @@ function App() {
 
           {/* Tab content */}
           <div className="flex-1 min-h-0">
-            {activeTab === 'chat' ? (
+            {activeTab === 'chat' && (
               <ChatWindow
                 messages={messages}
                 pendingChanges={pendingChanges}
@@ -298,8 +429,60 @@ function App() {
                 quickActions={quickActions}
                 onQuickAction={handleQuickAction}
               />
-            ) : (
+            )}
+            {activeTab === 'tune' && (
               <TuneSheet vehicleId={vehicleId} />
+            )}
+            {activeTab === 'sessions' && (
+              <div className="h-full flex flex-col">
+                <div className="px-4 py-2 border-b border-gray-800/50 flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-200">Sessions</span>
+                  <button
+                    onClick={() => { createNewSession(); setActiveTab('chat'); }}
+                    className="ml-auto flex items-center gap-1 px-2 py-1 rounded bg-pit-accent/20 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/30 text-[10px] transition-colors"
+                  >
+                    <Plus size={10} />
+                    New
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1.5">
+                  {sessions.length === 0 && (
+                    <div className="text-center text-gray-600 text-xs mt-8">
+                      No sessions yet. Start talking to your AI engineer!
+                    </div>
+                  )}
+                  {sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className={`flex items-center gap-2 px-3 py-2 rounded cursor-pointer transition-colors ${
+                        session.id === activeSessionId
+                          ? 'bg-pit-accent/10 border border-pit-accent/30'
+                          : 'bg-gray-800/30 border border-gray-700/20 hover:bg-gray-800/60'
+                      }`}
+                      onClick={() => { switchToSession(session.id); setActiveTab('chat'); }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-gray-200 truncate">
+                          {session.carName || `Vehicle ${session.vehicleId || '—'}`}
+                        </div>
+                        <div className="text-[9px] text-gray-500">
+                          {session.messages?.length || 0} messages · {new Date(session.updatedAt || session.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      {session.id === activeSessionId && (
+                        <span className="text-[8px] text-pit-accent uppercase font-medium">Active</span>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                        className="text-gray-600 hover:text-pit-danger transition-colors p-0.5"
+                        title="Delete session"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>

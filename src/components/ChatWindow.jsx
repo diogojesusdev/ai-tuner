@@ -92,7 +92,7 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onDismissChang
       {/* Header */}
       <div className="px-4 py-2 border-b border-gray-800/50 flex items-center gap-2">
         <MessageCircle size={16} className="text-pit-accent" />
-        <span className="text-sm font-medium text-gray-200">Race Engineer</span>
+        <span className="text-sm font-medium text-gray-200">AI Engineer</span>
         {/* Voice status indicator */}
         {isListening && (
           <div className="ml-auto flex items-center gap-1.5">
