@@ -218,6 +218,13 @@ function handleBackendMessage(msg) {
 
     case 'LISTENING_STATE':
       mainWindow.webContents.send('listening-state', msg.data);
+      // If user starts speaking while AI is thinking, cancel the pending request
+      if (msg.data.listening && isAiThinking) {
+        aiRequestId++; // Invalidate any in-flight response
+        isAiThinking = false;
+        mainWindow.webContents.send('ai-thinking', { thinking: false });
+        console.log('[Agent] AI request cancelled — user started speaking');
+      }
       break;
 
     case 'TELEMETRY_SUMMARY':
@@ -237,6 +244,8 @@ function handleBackendMessage(msg) {
 }
 
 let lastTelemetrySummary = {};
+let aiRequestId = 0; // Incremented per request, used to discard stale responses
+let isAiThinking = false;
 
 // ============ Agent State Machine ============
 
@@ -448,11 +457,21 @@ async function processUserMessage(userText) {
     return;
   }
 
+  // Mark as thinking and notify UI
+  const thisRequestId = ++aiRequestId;
+  isAiThinking = true;
+  if (mainWindow) {
+    mainWindow.webContents.send('ai-thinking', { thinking: true });
+  }
+
   // Request fresh telemetry summary
   if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
     sendToBackend('GET_TELEMETRY_SUMMARY', { window_minutes: telemetryWindowMinutes });
     await new Promise(resolve => setTimeout(resolve, 200));
   }
+
+  // Check if this request was cancelled while waiting for telemetry
+  if (thisRequestId !== aiRequestId) return;
 
   const contextPayload = buildContextPayload(userText);
 
@@ -460,8 +479,24 @@ async function processUserMessage(userText) {
     const response = await chatSession.sendMessage({
       message: JSON.stringify(contextPayload),
     });
+
+    // Discard response if a newer request was initiated (user interrupted)
+    if (thisRequestId !== aiRequestId) {
+      console.log('[Gemini] Response discarded — superseded by newer request');
+      return;
+    }
+
+    isAiThinking = false;
+    if (mainWindow) {
+      mainWindow.webContents.send('ai-thinking', { thinking: false });
+    }
     handleAIResponse(response.text);
   } catch (e) {
+    if (thisRequestId !== aiRequestId) return; // Cancelled
+    isAiThinking = false;
+    if (mainWindow) {
+      mainWindow.webContents.send('ai-thinking', { thinking: false });
+    }
     console.error('[Gemini] Error:', e.message);
     if (mainWindow) {
       mainWindow.webContents.send('ai-response', {

@@ -30,6 +30,7 @@ function App() {
   const [backendConnected, setBackendConnected] = useState(false);
   const [telemetryActive, setTelemetryActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'tune'
   const [vehicleId, setVehicleId] = useState(null);
@@ -113,6 +114,10 @@ function App() {
       setIsListening(data.listening);
     });
 
+    window.pitwall.onAiThinking((data) => {
+      setIsThinking(data.thinking);
+    });
+
     window.pitwall.onAgentState((data) => {
       setAgentState(data.state);
     });
@@ -131,6 +136,7 @@ function App() {
         window.pitwall.removeAllListeners('backend-status');
         window.pitwall.removeAllListeners('telemetry-status');
         window.pitwall.removeAllListeners('listening-state');
+        window.pitwall.removeAllListeners('ai-thinking');
         window.pitwall.removeAllListeners('agent-state');
         window.pitwall.removeAllListeners('car-memory');
       }
@@ -233,6 +239,7 @@ function App() {
                 onConfirmChanges={handleConfirmChanges}
                 onSendMessage={handleSendMessage}
                 isListening={isListening}
+                isThinking={isThinking}
                 quickActions={quickActions}
                 onQuickAction={handleQuickAction}
               />

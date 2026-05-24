@@ -70,6 +70,9 @@ contextBridge.exposeInMainWorld('pitwall', {
   onAgentState: (callback) => {
     ipcRenderer.on('agent-state', (event, data) => callback(data));
   },
+  onAiThinking: (callback) => {
+    ipcRenderer.on('ai-thinking', (event, data) => callback(data));
+  },
 
   // Cleanup listeners
   removeAllListeners: (channel) => {

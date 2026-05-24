@@ -7,7 +7,7 @@ import { MessageCircle, CheckCircle2, Circle, Send, Mic } from 'lucide-react';
  * and a pulsing mic indicator when the user is speaking.
  */
 
-function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage, isListening, quickActions, onQuickAction }) {
+function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage, isListening, isThinking, quickActions, onQuickAction }) {
   const [inputText, setInputText] = useState('');
   const [checkedChanges, setCheckedChanges] = useState(new Set());
   const messagesEndRef = useRef(null);
@@ -54,12 +54,28 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
       <div className="px-4 py-2 border-b border-gray-800/50 flex items-center gap-2">
         <MessageCircle size={16} className="text-pit-accent" />
         <span className="text-sm font-medium text-gray-200">Race Engineer</span>
-        {/* Listening indicator */}
+        {/* Voice status indicator */}
         {isListening && (
-          <div className="ml-auto flex items-center gap-1.5 animate-pulse">
-            <div className="listening-ripple" />
+          <div className="ml-auto flex items-center gap-1.5">
+            <div className="flex items-center gap-0.5">
+              <div className="w-1 h-3 bg-red-400 rounded-full animate-pulse" style={{animationDelay: '0ms'}} />
+              <div className="w-1 h-4 bg-red-400 rounded-full animate-pulse" style={{animationDelay: '150ms'}} />
+              <div className="w-1 h-2 bg-red-400 rounded-full animate-pulse" style={{animationDelay: '300ms'}} />
+              <div className="w-1 h-5 bg-red-400 rounded-full animate-pulse" style={{animationDelay: '100ms'}} />
+              <div className="w-1 h-3 bg-red-400 rounded-full animate-pulse" style={{animationDelay: '250ms'}} />
+            </div>
             <Mic size={14} className="text-red-400" />
             <span className="text-[10px] text-red-400 font-medium">Listening...</span>
+          </div>
+        )}
+        {!isListening && isThinking && (
+          <div className="ml-auto flex items-center gap-1.5">
+            <div className="flex gap-0.5">
+              <div className="w-1.5 h-1.5 bg-pit-info rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
+              <div className="w-1.5 h-1.5 bg-pit-info rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
+              <div className="w-1.5 h-1.5 bg-pit-info rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+            </div>
+            <span className="text-[10px] text-pit-info font-medium">Thinking...</span>
           </div>
         )}
       </div>
@@ -91,6 +107,20 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
             </div>
           </div>
         ))}
+
+        {/* Thinking indicator in chat */}
+        {isThinking && (
+          <div className="text-left animate-fade-in">
+            <div className="inline-block px-3 py-2 rounded-lg bg-gray-800/60 border border-gray-700/30">
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
+                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
+                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
