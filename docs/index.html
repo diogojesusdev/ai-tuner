@@ -351,10 +351,9 @@
   <section class="hero">
     <div class="hero-content">
       <div class="badge">Built for Forza Horizon 6</div>
-      <h1>Your AI <span>Race Engineer</span></h1>
+      <h1>Stop Guessing. <span>Start Tuning.</span></h1>
       <p class="subtitle">
-        Real-time telemetry analysis, voice-activated tuning suggestions, and per-car setup memory.
-        Talk to your engineer while you drive.
+        AI Tuner is like having a pro race engineer riding shotgun. Just talk — tell it your car feels loose, snappy, or underpowered — and it watches your live telemetry to tell you exactly what to change in the garage.
       </p>
       <div class="cta-group">
         <a href="https://github.com/diogojesusdev/ai-tuner/releases/latest" class="btn btn-primary">
@@ -369,38 +368,69 @@
 
   <!-- Features -->
   <section class="features">
-    <h2>Built for <span>Drivers</span></h2>
-    <p class="features-subtitle">Everything you need to dial in the perfect setup without leaving the cockpit.</p>
+    <h2>What It <span>Actually Does</span></h2>
+    <p class="features-subtitle">No spreadsheets. No YouTube guides. Just drive, talk, and get faster.</p>
     <div class="feature-grid">
       <div class="feature-card">
         <div class="feature-icon red">🎙️</div>
-        <h3>Voice-Activated</h3>
-        <p>Hold push-to-talk and describe how the car feels. "The rear is snapping on entry" — your engineer handles the rest. Fully local speech-to-text, zero latency.</p>
+        <h3>Talk Like You're on the Radio</h3>
+        <p>Hold push-to-talk and describe the problem in your own words. "I keep spinning out on corner exit" or "The front washes out at high speed." The AI understands what you mean and responds with specific changes.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon blue">📊</div>
-        <h3>Live Telemetry Analysis</h3>
-        <p>Reads tire temps, slip ratios, suspension travel, G-forces, and driver inputs in real-time via Forza's UDP Data Out. Per-corner data for surgical precision.</p>
+        <h3>It Watches You Drive</h3>
+        <p>While you lap, AI Tuner reads tire temps, suspension compression, slip angles, and G-forces from Forza's live telemetry stream — 10 times per second, per corner. It sees problems you can't feel.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon red">🧠</div>
-        <h3>Gemini AI Engineer</h3>
-        <p>Powered by Google's Gemini AI. Understands racing physics, drifting dynamics, and tuning relationships. Suggests relative adjustments based on real data.</p>
+        <h3>Real Tuning Knowledge</h3>
+        <p>Powered by Google Gemini AI trained on racing physics. It knows that rear oversteer + high tire temps = too much camber or too stiff ARBs. It gives you relative adjustments: "Soften rear springs by 2 clicks."</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon blue">💾</div>
-        <h3>Per-Car Memory</h3>
-        <p>Every tune is saved per vehicle. Switch cars and your engineer remembers the last setup, discipline, HP tier, and modification history.</p>
+        <h3>Remembers Every Car</h3>
+        <p>Built a drift Silvia last week? The tune is saved. Switch to your rally Impreza and back — everything is right where you left it. No more forgetting what you changed.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon red">🏎️</div>
-        <h3>All Disciplines</h3>
-        <p>Racing, drifting, rally, or drag — the engineer adapts its approach. Drifting builds get HP-tier-specific advice (low/mid/high).</p>
+        <h3>Works for Any Build</h3>
+        <p>Grip racing, drifting (low/mid/high HP), rally, or drag. The engineer adapts — it won't suggest grip setups for a 900hp drift missile, and it understands rally needs softer suspension.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon blue">🪟</div>
-        <h3>Always-On Overlay</h3>
-        <p>Transparent, always-on-top window with compact speed/RPM readout. Sits over your game in borderless windowed mode. Toggle visibility with a hotkey.</p>
+        <h3>Stays Out of Your Way</h3>
+        <p>A tiny transparent overlay that sits on top of your game. Shows speed, RPM, and your engineer's messages. Toggle it with a hotkey — it never interrupts your driving.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Cases -->
+  <section class="how-it-works" style="background: transparent;">
+    <div class="how-it-works-inner">
+      <h2>Real Examples</h2>
+      <p style="text-align: center; color: var(--gray); margin-bottom: 3rem;">Here's what a conversation with your AI engineer looks like mid-session.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number" style="background: var(--blue);">💬</div>
+          <div>
+            <h4 style="color: var(--gray-light);">You: "The rear keeps stepping out mid-corner, especially in long sweepers."</h4>
+            <p style="margin-top: 0.5rem;"><strong style="color: var(--red);">Engineer:</strong> "Your rear tires are 20°C hotter than fronts and I'm seeing 1.4+ slip ratio spikes. Try adding 0.2 Bar rear tire pressure and softening the rear ARB by 2-3 clicks. That'll give you more mechanical grip without killing rotation on entry."</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number" style="background: var(--blue);">💬</div>
+          <div>
+            <h4 style="color: var(--gray-light);">You: "Car feels planted now but it's understeering into tight corners."</h4>
+            <p style="margin-top: 0.5rem;"><strong style="color: var(--red);">Engineer:</strong> "Good — the rear is balanced now. For the front, I'd drop front tire pressure by 0.1 Bar and add half a degree of negative camber. Your front suspension is bottoming out 40% of the time, so stiffen front springs by 1 click too."</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-number" style="background: var(--blue);">💬</div>
+          <div>
+            <h4 style="color: var(--gray-light);">You: "I want more angle on my drift entries."</h4>
+            <p style="margin-top: 0.5rem;"><strong style="color: var(--red);">Engineer:</strong> "For snappier initiation, try adding 1-2 degrees of front toe-out and softening the front rebound by 2 clicks. That'll let the weight transfer faster on flick. Your current slip angles peak at 28° — this should push you past 35°."</p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -408,41 +438,41 @@
   <!-- How it works -->
   <section class="how-it-works">
     <div class="how-it-works-inner">
-      <h2>How It Works</h2>
+      <h2>Setup in 5 Minutes</h2>
       <div class="steps">
         <div class="step">
           <div class="step-number">1</div>
           <div>
-            <h4>Enable Forza Data Out</h4>
-            <p>In FH6 settings, enable "Data Out" on UDP port 5300. This broadcasts live telemetry to AI Tuner.</p>
+            <h4>Turn on Forza Data Out</h4>
+            <p>In FH6 Settings → HUD & Gameplay, enable "Data Out" and set the port to 5300. This lets Forza stream live car data to AI Tuner.</p>
           </div>
         </div>
         <div class="step">
           <div class="step-number">2</div>
           <div>
-            <h4>Launch AI Tuner</h4>
-            <p>Run the app, enter your free Gemini API key in Settings. The overlay appears and connects to telemetry automatically.</p>
+            <h4>Launch AI Tuner &amp; Paste Your API Key</h4>
+            <p>Download, run the app, and paste your free Google Gemini API key in Settings. That's it — the overlay appears on screen and connects to telemetry automatically.</p>
           </div>
         </div>
         <div class="step">
           <div class="step-number">3</div>
           <div>
-            <h4>Drive &amp; Identify</h4>
-            <p>Start driving. The engineer detects your car and asks you to confirm the name and discipline. Quick-select buttons make it instant.</p>
+            <h4>Pick a Car and Drive</h4>
+            <p>Jump in any car. The engineer detects a new vehicle and asks you to confirm the name and what you're doing (racing, drifting, rally, drag). Tap the quick buttons — takes 2 seconds.</p>
           </div>
         </div>
         <div class="step">
           <div class="step-number">4</div>
           <div>
-            <h4>Collect &amp; Analyze</h4>
-            <p>Drive for a few minutes while the engineer builds a telemetry profile — tire temps, balance, slip patterns, G-forces.</p>
+            <h4>Let It Learn Your Driving</h4>
+            <p>Drive normally for a few minutes. The AI builds a profile of your car's behavior — which tires overheat, where you lose grip, how hard you're pushing.</p>
           </div>
         </div>
         <div class="step">
           <div class="step-number">5</div>
           <div>
-            <h4>Get Tuning Advice</h4>
-            <p>Describe what feels wrong or just ask. The engineer cross-references your telemetry data and suggests relative adjustments. Apply them in the garage and keep driving.</p>
+            <h4>Ask for Help, Get Faster</h4>
+            <p>Hold push-to-talk and describe what feels off. The engineer combines your feedback with hard telemetry data to give you precise, actionable changes. Go to the garage, apply them, and feel the difference.</p>
           </div>
         </div>
       </div>
