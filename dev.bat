@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo   AI Tuner - Race Engineer Overlay
+echo   AI Tuner - DEV MODE (Hot Reload)
 echo ============================================
 echo.
 
@@ -19,10 +19,11 @@ if errorlevel 1 (
     echo.
 )
 
-:: Build frontend
-echo [*] Building frontend...
-call npx vite build
+echo [*] Starting Vite dev server + Electron (hot reload enabled)...
+echo     UI changes will reflect instantly without restart.
 echo.
 
-echo [*] Launching AI Tuner (backend starts automatically)...
+:: Start Vite dev server in background, then launch Electron
+start "" /B npx vite --host 2>nul
+timeout /t 3 /nobreak >nul
 npx electron .
