@@ -76,9 +76,11 @@ function createWindow() {
   });
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
-    // Uncomment for dev tools:
-    // mainWindow.webContents.openDevTools({ mode: 'detach' });
+    // Try Vite dev server first, fall back to built dist/
+    mainWindow.loadURL('http://localhost:5173').catch(() => {
+      console.log('[UI] Dev server not running, loading from dist/');
+      mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }

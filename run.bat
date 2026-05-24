@@ -19,11 +19,16 @@ if errorlevel 1 (
     echo.
 )
 
+:: Build frontend if dist doesn't exist or is outdated
+echo [*] Building frontend...
+call npx vite build
+echo.
+
 echo [1/2] Starting Python backend...
 start "PitWall Backend" cmd /k "cd backend_python && python main.py"
 
 echo [2/2] Starting Electron overlay...
-timeout /t 2 /nobreak >nul
+timeout /t 3 /nobreak >nul
 start "PitWall Overlay" cmd /k "npx electron ."
 
 echo.
