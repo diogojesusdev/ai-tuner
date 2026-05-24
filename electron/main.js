@@ -454,7 +454,7 @@ function handleAIResponse(text) {
   }
 }
 
-async function processUserMessage(userText) {
+async function processUserMessage(userText, images) {
   if (!genaiClient || !apiKey) {
     if (mainWindow) {
       mainWindow.webContents.send('ai-response', {
@@ -483,9 +483,23 @@ async function processUserMessage(userText) {
 
   const contextPayload = buildContextPayload(userText);
 
+  // Build message parts: text context + optional images
+  const messageParts = [{ text: JSON.stringify(contextPayload) }];
+  if (images && images.length > 0) {
+    for (const img of images) {
+      messageParts.push({
+        inlineData: {
+          mimeType: img.mimeType || 'image/png',
+          data: img.data,
+        },
+      });
+    }
+    console.log(`[Gemini] Sending ${images.length} image(s) with message`);
+  }
+
   try {
     const response = await chatSession.sendMessage({
-      message: JSON.stringify(contextPayload),
+      message: messageParts,
     });
 
     // Discard response if a newer request was initiated (user interrupted)
@@ -522,8 +536,8 @@ ipcMain.handle('set-api-key', async (event, { key, model }) => {
   return { success };
 });
 
-ipcMain.handle('send-message', async (event, { text }) => {
-  await processUserMessage(text);
+ipcMain.handle('send-message', async (event, { text, images }) => {
+  await processUserMessage(text, images);
 });
 
 ipcMain.handle('confirm-changes', async (event, { confirmedIds }) => {

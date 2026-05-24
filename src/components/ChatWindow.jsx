@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, CheckCircle2, Circle, Send, Mic } from 'lucide-react';
+import { MessageCircle, CheckCircle2, Circle, Send, Mic, Image, X } from 'lucide-react';
 
 /**
  * ChatWindow - Conversational UI with the AI race engineer.
@@ -9,8 +9,10 @@ import { MessageCircle, CheckCircle2, Circle, Send, Mic } from 'lucide-react';
 
 function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage, isListening, isThinking, quickActions, onQuickAction }) {
   const [inputText, setInputText] = useState('');
+  const [pastedImages, setPastedImages] = useState([]); // [{data: base64, mimeType, preview: dataUrl}]
   const [checkedChanges, setCheckedChanges] = useState(new Set());
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Get the PTT key label for display
   const pttKeyId = localStorage.getItem('pitwall_ptt_key') || 'caps_lock';
@@ -21,11 +23,40 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const newImages = [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) continue;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result;
+          // Extract base64 and mimeType
+          const [header, base64] = dataUrl.split(',');
+          const mimeType = header.match(/data:(.*?);/)?.[1] || 'image/png';
+          setPastedImages((prev) => [...prev, { data: base64, mimeType, preview: dataUrl }]);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  const removeImage = (index) => {
+    setPastedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
-    onSendMessage(inputText.trim());
+    if (!inputText.trim() && pastedImages.length === 0) return;
+    const images = pastedImages.map(({ data, mimeType }) => ({ data, mimeType }));
+    onSendMessage(inputText.trim(), images.length > 0 ? images : undefined);
     setInputText('');
+    setPastedImages([]);
   };
 
   const toggleChange = (id) => {
@@ -90,6 +121,7 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
           <div className="text-center text-gray-600 text-xs mt-8">
             <p>Hold <kbd className="px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded text-gray-400 text-[10px] font-mono">{pttLabel}</kbd> to talk to your engineer.</p>
             <p className="mt-1">Or type a message below.</p>
+            <p className="mt-2 text-gray-700">💡 Paste tuning menu screenshots with <kbd className="px-1 py-0.5 bg-gray-800 border border-gray-700 rounded text-gray-500 text-[10px] font-mono">Ctrl+V</kbd></p>
           </div>
         )}
 
@@ -109,6 +141,14 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
                   : 'bg-gray-800/60 text-gray-200 border border-gray-700/30'
               }`}
             >
+              {msg.images && msg.images.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  {msg.images.map((img, j) => (
+                    <img key={j} src={img.preview || `data:${img.mimeType};base64,${img.data}`} alt="attached"
+                      className="w-16 h-16 object-cover rounded border border-gray-600/50" />
+                  ))}
+                </div>
+              )}
               {msg.text}
             </div>
           </div>
@@ -196,17 +236,36 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-gray-800/50">
+        {/* Pasted image previews */}
+        {pastedImages.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {pastedImages.map((img, i) => (
+              <div key={i} className="relative group">
+                <img src={img.preview} alt="pasted"
+                  className="w-14 h-14 object-cover rounded border border-gray-600/50" />
+                <button
+                  onClick={() => removeImage(i)}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-gray-900 border border-gray-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X size={8} className="text-gray-300" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
+            ref={inputRef}
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Type a message..."
+            onPaste={handlePaste}
+            placeholder={pastedImages.length > 0 ? "Add a message about these images..." : "Type a message or paste a screenshot..."}
             className="flex-1 bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-pit-accent/50"
           />
           <button
             type="submit"
-            disabled={!inputText.trim()}
+            disabled={!inputText.trim() && pastedImages.length === 0}
             className="p-1.5 rounded-md bg-pit-accent/20 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/30 disabled:opacity-30 transition-colors"
           >
             <Send size={14} />
@@ -215,6 +274,9 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
         <div className="mt-1.5 flex items-center gap-1 text-[9px] text-gray-600">
           <Mic size={9} />
           <span>Hold <kbd className="px-1 py-0.5 bg-gray-800/80 border border-gray-700/50 rounded text-gray-500 font-mono">{pttLabel}</kbd> to speak</span>
+          <span className="mx-1">·</span>
+          <Image size={9} />
+          <span><kbd className="px-1 py-0.5 bg-gray-800/80 border border-gray-700/50 rounded text-gray-500 font-mono">Ctrl+V</kbd> paste screenshots</span>
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld('pitwall', {
   getAgentState: () => ipcRenderer.invoke('get-agent-state'),
   
   // Chat
-  sendMessage: (text) => ipcRenderer.invoke('send-message', { text }),
+  sendMessage: (text, images) => ipcRenderer.invoke('send-message', { text, images }),
   confirmChanges: (confirmedIds) => ipcRenderer.invoke('confirm-changes', { confirmedIds }),
   getPendingChanges: () => ipcRenderer.invoke('get-pending-changes'),
   

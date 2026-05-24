@@ -158,13 +158,13 @@ function App() {
     setPendingChanges(result.remaining || []);
   }, []);
 
-  const handleSendMessage = useCallback(async (text) => {
+  const handleSendMessage = useCallback(async (text, images) => {
     if (!window.pitwall) return;
     setMessages((prev) => [
       ...prev,
-      { role: 'user', text, timestamp: Date.now() / 1000 },
+      { role: 'user', text, images, timestamp: Date.now() / 1000 },
     ]);
-    await window.pitwall.sendMessage(text);
+    await window.pitwall.sendMessage(text, images);
   }, []);
 
   const handleQuickAction = useCallback(async (value) => {

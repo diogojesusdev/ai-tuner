@@ -2,11 +2,18 @@
   "cars": {
     "3402": {
       "discipline": "drifting",
-      "past_modifications": [],
+      "past_modifications": [
+        "Increase rear tire pressure by +0.3 Bar",
+        "Decrease front tire pressure by -0.1 Bar"
+      ],
       "tune": {
         "discipline": "drifting",
         "car_name": "Toyota Supra MK5",
-        "hp_tier": "low"
+        "hp_tier": "low",
+        "tire_pressure_fl": "2.2",
+        "tire_pressure_fr": "2.2",
+        "tire_pressure_rl": "2.5",
+        "tire_pressure_rr": "2.5"
       },
       "car_name": "Toyota Supra MK5"
     }
