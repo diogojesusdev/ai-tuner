@@ -70,7 +70,7 @@ jobs:
             - Windows 10/11
             - Python 3.11+ (for telemetry backend)
             - Forza Horizon 6 with Data Out enabled (UDP port 5300)
-            - Gemini API key ([Get one free](https://aistudio.google.com))
+            - Gemini API key ([Get one here](https://aistudio.google.com))
           files: dist/installer/*.exe
           draft: false
           prerelease: false
