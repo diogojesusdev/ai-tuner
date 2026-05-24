@@ -14,6 +14,13 @@ const STATE_LABELS = {
   UPDATING_TUNE: { text: 'Updating', color: 'text-pit-info' },
 };
 
+function formatTokens(n) {
+  if (!n) return '0';
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
+
 function AgentStatePill({ state, onStopCollecting, maxMinutes }) {
   const info = STATE_LABELS[state] || STATE_LABELS.IDLE;
 
@@ -66,6 +73,7 @@ function App() {
   const [activeSessionId, setActiveSessionId] = useState(() => {
     return localStorage.getItem('pitwall_active_session') || null;
   });
+  const [sessionTokens, setSessionTokens] = useState({ input: 0, output: 0 });
 
   // Refs to avoid stale closures in telemetry listener
   const vehicleIdRef = useRef(vehicleId);
@@ -87,30 +95,30 @@ function App() {
     }
   }, [activeSessionId]);
 
-  // Auto-save messages into active session (debounced)
+  // Auto-save messages and tokens into active session (debounced)
   useEffect(() => {
     if (!activeSessionId || messages.length === 0) return;
     const timeout = setTimeout(() => {
       setSessions((prev) => prev.map((s) =>
         s.id === activeSessionId
-          ? { ...s, messages, carName: carName || s.carName, updatedAt: Date.now() }
+          ? { ...s, messages, carName: carName || s.carName, tokens: sessionTokens, updatedAt: Date.now() }
           : s
       ));
     }, 500);
     return () => clearTimeout(timeout);
-  }, [messages, activeSessionId, carName]);
+  }, [messages, activeSessionId, carName, sessionTokens]);
 
   // Create or switch session when car changes
   const switchToSession = useCallback((sessionId) => {
-    // Save current messages before switching
+    // Save current messages and tokens before switching
     if (activeSessionId && messages.length > 0) {
       setSessions((prev) => prev.map((s) =>
         s.id === activeSessionId
-          ? { ...s, messages, carName: carName || s.carName, updatedAt: Date.now() }
+          ? { ...s, messages, carName: carName || s.carName, tokens: sessionTokens, updatedAt: Date.now() }
           : s
       ));
     }
-    // Reset session token counter
+    // Reset session token counter in backend
     if (window.pitwall?.resetSessionTokens) {
       window.pitwall.resetSessionTokens();
     }
@@ -123,8 +131,9 @@ function App() {
       setVehicleId(target.vehicleId || null);
       setPendingChanges([]);
       setQuickActions([]);
+      setSessionTokens(target.tokens || { input: 0, output: 0 });
     }
-  }, [activeSessionId, messages, carName, sessions]);
+  }, [activeSessionId, messages, carName, sessions, sessionTokens]);
 
   const createNewSession = useCallback((name, vehId) => {
     const id = `session_${Date.now()}`;
@@ -298,6 +307,12 @@ function App() {
       }
     });
 
+    window.pitwall.onTokenUsage((data) => {
+      if (data?.session) {
+        setSessionTokens(data.session);
+      }
+    });
+
     return () => {
       if (window.pitwall) {
         window.pitwall.removeAllListeners('telemetry-update');
@@ -310,6 +325,7 @@ function App() {
         window.pitwall.removeAllListeners('voice-error');
         window.pitwall.removeAllListeners('agent-state');
         window.pitwall.removeAllListeners('car-memory');
+        window.pitwall.removeAllListeners('token-usage');
       }
     };
   }, []);
@@ -439,17 +455,28 @@ function App() {
           {/* Tab content */}
           <div className="flex-1 min-h-0">
             {activeTab === 'chat' && (
-              <ChatWindow
-                messages={messages}
-                pendingChanges={pendingChanges}
-                onConfirmChanges={handleConfirmChanges}
-                onDismissChanges={handleDismissChanges}
-                onSendMessage={handleSendMessage}
-                isListening={isListening}
-                isThinking={isThinking}
-                quickActions={quickActions}
-                onQuickAction={handleQuickAction}
-              />
+              <div className="h-full flex flex-col">
+                {(sessionTokens.input > 0 || sessionTokens.output > 0) && (
+                  <div className="px-4 py-1 border-b border-gray-800/50 flex items-center gap-2">
+                    <span className="text-[9px] text-gray-500">Session tokens:</span>
+                    <span className="text-[9px] text-pit-info tabular-nums">{formatTokens(sessionTokens.input)} in</span>
+                    <span className="text-[9px] text-pit-accent tabular-nums">{formatTokens(sessionTokens.output)} out</span>
+                  </div>
+                )}
+                <div className="flex-1 min-h-0">
+                  <ChatWindow
+                    messages={messages}
+                    pendingChanges={pendingChanges}
+                    onConfirmChanges={handleConfirmChanges}
+                    onDismissChanges={handleDismissChanges}
+                    onSendMessage={handleSendMessage}
+                    isListening={isListening}
+                    isThinking={isThinking}
+                    quickActions={quickActions}
+                    onQuickAction={handleQuickAction}
+                  />
+                </div>
+              </div>
             )}
             {activeTab === 'tune' && (
               <TuneSheet vehicleId={vehicleId} />
@@ -498,6 +525,9 @@ function App() {
                         </div>
                         <div className="text-[9px] text-gray-500">
                           {session.messages?.length || 0} messages · {new Date(session.updatedAt || session.createdAt).toLocaleDateString()}
+                          {session.tokens && (session.tokens.input > 0 || session.tokens.output > 0) && (
+                            <span className="ml-1.5 text-gray-600">· {formatTokens(session.tokens.input + session.tokens.output)} tok</span>
+                          )}
                         </div>
                       </div>
                       {session.id === activeSessionId && (
