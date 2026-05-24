@@ -124,6 +124,11 @@ class PitWallBackend:
                 updates = msg.get("data", {}).get("updates", {})
                 self._save_car_memory(vehicle_id, updates)
 
+            elif msg_type == "SET_PTT_KEY":
+                # User changed PTT key from UI
+                new_key = msg.get("data", {}).get("key", "caps_lock")
+                self._update_ptt_key(new_key)
+
         except json.JSONDecodeError:
             print(f"[WS] Invalid JSON received: {raw[:100]}")
         except Exception as e:
@@ -289,6 +294,21 @@ class PitWallBackend:
         data["cars"][vid] = car
         with open(CAR_MEMORY_PATH, "w") as f:
             json.dump(data, f, indent=2)
+
+    def _update_ptt_key(self, new_key: str):
+        """Update PTT key binding at runtime and persist to config."""
+        self._ptt_key_name = new_key
+        # Persist to config.json
+        try:
+            with open(CONFIG_PATH, "r") as f:
+                cfg = json.load(f)
+            cfg["hotkeys"]["push_to_talk"] = new_key
+            cfg["voice"]["push_to_talk_key"] = new_key
+            with open(CONFIG_PATH, "w") as f:
+                json.dump(cfg, f, indent=2)
+            print(f"[Hotkey] PTT key updated to: {new_key} (restart backend to apply)")
+        except Exception as e:
+            print(f"[Hotkey] Failed to save PTT key: {e}")
 
     def stop(self):
         """Gracefully stop all services."""

@@ -51,6 +51,7 @@ function createWindow() {
     hasShadow: false,
     skipTaskbar: false,
     resizable: true,
+    focusable: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -58,8 +59,21 @@ function createWindow() {
     },
   });
 
+  // Use 'screen-saver' level to stay above fullscreen games
+  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+
   // Click-through: ignore mouse events unless hovering interactive elements
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
+
+  // Re-assert topmost when focus is lost (e.g., game reclaims focus)
+  mainWindow.on('blur', () => {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  });
+
+  // Keep topmost after any show/restore
+  mainWindow.on('show', () => {
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  });
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
@@ -258,9 +272,19 @@ ipcMain.handle('confirm-changes', async (event, { confirmedIds }) => {
   return { remaining: pendingChanges };
 });
 
+ipcMain.handle('set-ptt-key', async (event, { key }) => {
+  sendToBackend('SET_PTT_KEY', { key });
+  return { success: true };
+});
+
 ipcMain.handle('set-click-through', async (event, { ignore }) => {
   if (mainWindow) {
     mainWindow.setIgnoreMouseEvents(ignore, { forward: true });
+    if (!ignore) {
+      // Bring overlay to front when user wants to interact
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+      mainWindow.focus();
+    }
   }
 });
 

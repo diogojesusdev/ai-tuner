@@ -8,6 +8,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('pitwall', {
   // Settings
   setApiKey: (key, model) => ipcRenderer.invoke('set-api-key', { key, model }),
+  setPttKey: (key) => ipcRenderer.invoke('set-ptt-key', { key }),
   
   // Chat
   sendMessage: (text) => ipcRenderer.invoke('send-message', { text }),

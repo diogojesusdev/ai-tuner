@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Key, Cpu, Save } from 'lucide-react';
+import { X, Key, Cpu, Save, Mic } from 'lucide-react';
 
 /**
- * SettingsPanel - Configuration for Gemini API key and model selection.
+ * SettingsPanel - Configuration for Gemini API key, model selection, and PTT key.
  */
 
 const AVAILABLE_MODELS = [
@@ -12,9 +12,19 @@ const AVAILABLE_MODELS = [
   { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Legacy)' },
 ];
 
+const PTT_KEY_OPTIONS = [
+  { id: 'caps_lock', name: 'CapsLock' },
+  { id: 'scroll_lock', name: 'ScrollLock' },
+  { id: 'f9', name: 'F9' },
+  { id: 'f10', name: 'F10' },
+  { id: 'f11', name: 'F11' },
+  { id: 'f12', name: 'F12' },
+];
+
 function SettingsPanel({ onClose }) {
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('gemini-2.5-flash');
+  const [pttKey, setPttKey] = useState('caps_lock');
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -22,8 +32,10 @@ function SettingsPanel({ onClose }) {
   useEffect(() => {
     const savedKey = localStorage.getItem('pitwall_api_key') || '';
     const savedModel = localStorage.getItem('pitwall_model') || 'gemini-2.5-flash';
+    const savedPtt = localStorage.getItem('pitwall_ptt_key') || 'caps_lock';
     setApiKey(savedKey);
     setModel(savedModel);
+    setPttKey(savedPtt);
   }, []);
 
   const handleSave = async () => {
@@ -38,10 +50,12 @@ function SettingsPanel({ onClose }) {
     // Save to localStorage
     localStorage.setItem('pitwall_api_key', apiKey);
     localStorage.setItem('pitwall_model', model);
+    localStorage.setItem('pitwall_ptt_key', pttKey);
 
     // Send to Electron main process
     if (window.pitwall) {
       const result = await window.pitwall.setApiKey(apiKey, model);
+      await window.pitwall.setPttKey(pttKey);
       if (result.success) {
         setStatus('✓ Connected successfully');
       } else {
@@ -97,6 +111,25 @@ function SettingsPanel({ onClose }) {
             {AVAILABLE_MODELS.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Push-to-Talk Key */}
+        <div>
+          <label className="flex items-center gap-1.5 text-[10px] text-gray-500 uppercase mb-1">
+            <Mic size={10} />
+            Push-to-Talk Key
+          </label>
+          <select
+            value={pttKey}
+            onChange={(e) => setPttKey(e.target.value)}
+            className="w-full bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-pit-accent/50"
+          >
+            {PTT_KEY_OPTIONS.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.name}
               </option>
             ))}
           </select>
