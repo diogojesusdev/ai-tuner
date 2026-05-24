@@ -12,8 +12,8 @@
         "hp_tier": "low",
         "tire_pressure_fl": "2.2",
         "tire_pressure_fr": "2.2",
-        "tire_pressure_rl": "2.5",
-        "tire_pressure_rr": "2.5"
+        "tire_pressure_rl": "2.2",
+        "tire_pressure_rr": "2.2"
       },
       "car_name": "Toyota Supra MK5"
     }

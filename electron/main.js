@@ -106,7 +106,7 @@ You MUST reply as JSON:
 - "pending_changes": Array of suggested adjustments (empty if none). Each has a unique "id" and "action" string. When you know the current value, ALWAYS include the resulting value in the action like: "Increase rear tire pressure by +0.3 Bar (2.4 → 2.7)". This saves the driver from doing mental math.
 - "tune_updates": Object mapping tune keys to new absolute values. Only include when you KNOW the absolute value. Keys: tire_pressure_fl, tire_pressure_fr, tire_pressure_rl, tire_pressure_rr, camber_fl, camber_fr, camber_rl, camber_rr, toe_fl, toe_fr, toe_rl, toe_rr, spring_front, spring_rear, ride_height_front, ride_height_rear, bump_front, bump_rear, rebound_front, rebound_rear, arb_front, arb_rear, aero_front, aero_rear, brake_balance, brake_pressure, diff_accel, diff_decel, final_drive.
 - "next_state": Suggest what state the agent should transition to. Options: IDENTIFY_CAR, COLLECTING_DATA, READY, SUGGESTING, UPDATING_TUNE.
-- "user_input_request": When you need structured input from the user. "type" indicates what kind of data you need. Types: "discipline" (shows racing/drifting/rally/drag buttons), "hp_tier" (shows low/mid/high HP buttons), "car_identity" (ask for car name), "tune_values" (ask for tune fields), "confirmation", "freeform". "fields" lists the specific tune keys if requesting tune values.
+- "user_input_request": When you need structured input from the user. "type" indicates what kind of data you need. Types: "discipline" (shows racing/drifting/rally/drag buttons), "hp_tier" (shows low/mid/high HP buttons), "car_identity" (ask for car name), "tune_values" (ask for tune fields), "go_test" (shows a "Go test!" button — use this when telling the driver to go back on track to test changes), "confirmation", "freeform". "fields" lists the specific tune keys if requesting tune values.
 
 ## Rules
 - You do NOT know exact slider values. Suggest RELATIVE adjustments ("add 2 clicks", "soften by 0.1 Bar").
@@ -114,6 +114,7 @@ You MUST reply as JSON:
 - Only transition to SUGGESTING when you actually have pending_changes.
 - Reference specific telemetry values when explaining reasoning (e.g., "Your rear slip angle is averaging 12° vs 6° front — classic oversteer").
 - Be concise — the driver is focused on the game. Keep non-technical interactions (identity, discipline, confirmation) to 1-2 sentences max. No filler, no greetings, no "welcome" messages.
+- When telling the driver to go test their changes on track, ALWAYS include user_input_request with type "go_test". This gives them a clear button to press when they're ready.
 - If current tune values are empty/unknown, ask the user to provide their current settings before suggesting changes.`;
 
 function createWindow() {
@@ -539,6 +540,12 @@ ipcMain.handle('set-api-key', async (event, { key, model }) => {
 
 ipcMain.handle('send-message', async (event, { text, images }) => {
   await processUserMessage(text, images);
+});
+
+ipcMain.handle('start-collecting', async () => {
+  dataCollectionStart = Date.now();
+  setAgentState(AGENT_STATES.COLLECTING_DATA);
+  return { success: true };
 });
 
 ipcMain.handle('confirm-changes', async (event, { confirmedIds }) => {

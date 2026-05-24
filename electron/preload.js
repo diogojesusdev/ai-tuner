@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('pitwall', {
   
   // Chat
   sendMessage: (text, images) => ipcRenderer.invoke('send-message', { text, images }),
+  startCollecting: () => ipcRenderer.invoke('start-collecting'),
   confirmChanges: (confirmedIds) => ipcRenderer.invoke('confirm-changes', { confirmedIds }),
   getPendingChanges: () => ipcRenderer.invoke('get-pending-changes'),
   

@@ -94,6 +94,10 @@ function App() {
               { label: 'Drag', value: 'Drag' },
             ]);
           }
+        } else if (req.type === 'go_test') {
+          setQuickActions([
+            { label: '👍 Go test!', value: '__GO_TEST__' },
+          ]);
         } else {
           setQuickActions([]);
         }
@@ -170,6 +174,13 @@ function App() {
   const handleQuickAction = useCallback(async (value) => {
     setQuickActions([]);
     if (!window.pitwall) return;
+
+    // Special action: transition to collecting data
+    if (value === '__GO_TEST__') {
+      await window.pitwall.startCollecting();
+      return;
+    }
+
     setMessages((prev) => [
       ...prev,
       { role: 'user', text: value, timestamp: Date.now() / 1000 },
