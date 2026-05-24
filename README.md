@@ -1,4 +1,4 @@
-# PitWall - AI Race Engineer Overlay
+# AI Tuner - AI Race Engineer Overlay
 
 A transparent, voice-activated in-game overlay for racing games that acts as an AI pit-lane race engineer. Monitors live UDP telemetry, processes voice commands locally, and uses Gemini AI to provide relative tuning adjustments.
 

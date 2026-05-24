@@ -1,7 +1,7 @@
-# PitWall - Copilot Instructions
+# AI Tuner - Copilot Instructions
 
 ## Project Summary
-PitWall is a transparent, voice-activated in-game overlay for racing games (Forza Horizon 6 first). It's a split-stack app: Python handles hardware I/O (UDP telemetry, audio, hotkeys) and Electron+React handles the UI overlay and Gemini AI calls.
+AI Tuner is a transparent, voice-activated in-game overlay for racing games (Forza Horizon 6 first). It's a split-stack app: Python handles hardware I/O (UDP telemetry, audio, hotkeys) and Electron+React handles the UI overlay and Gemini AI calls.
 
 ## Architecture
 
@@ -49,7 +49,7 @@ Game (UDP:5300) → Python Backend → WebSocket (ws://127.0.0.1:8765) → Elect
 | File | Role |
 |------|------|
 | `main.js` | Window creation, WebSocket client, Gemini chat session, IPC handlers |
-| `preload.js` | Context bridge exposing `window.pitwall` API to renderer |
+| `preload.js` | Context bridge exposing `window.AI Tuner` API to renderer |
 
 ### React (`src/`)
 | File | Role |

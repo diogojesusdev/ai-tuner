@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo   PitWall - Windows Installer Build
+echo   AI Tuner - Windows Installer Build
 echo ============================================
 echo.
 
@@ -38,7 +38,7 @@ if errorlevel 1 (
 )
 
 pyinstaller --noconfirm --onedir --console ^
-    --name "pitwall-backend" ^
+    --name "ai-tuner-backend" ^
     --distpath "dist\python" ^
     --workpath "build\pyinstaller" ^
     --specpath "build" ^
@@ -64,7 +64,6 @@ if errorlevel 1 (
 echo.
 echo ============================================
 echo   Build Complete!
-echo   Installer: dist\pitwall-overlay Setup*.exe
-echo   Python:    dist\python\pitwall-backend\
+echo   Installer: dist\installer\AI Tuner Setup*.exe
 echo ============================================
 pause

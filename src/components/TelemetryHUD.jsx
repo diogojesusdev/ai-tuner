@@ -47,7 +47,7 @@ function TelemetryHUD({ telemetry, telemetryActive, carName }) {
             className="h-full rounded-full transition-all duration-75"
             style={{
               width: `${Math.min(rpmPercent, 100)}%`,
-              backgroundColor: rpmPercent > 90 ? '#ff2d55' : '#00ff88',
+              backgroundColor: rpmPercent > 90 ? '#ff6b35' : '#ff2d55',
             }}
           />
         </div>

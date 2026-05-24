@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo   PitWall - AI Race Engineer Overlay
+echo   AI Tuner - Race Engineer Overlay
 echo ============================================
 echo.
 
@@ -24,5 +24,5 @@ echo [*] Building frontend...
 call npx vite build
 echo.
 
-echo [*] Launching PitWall (backend starts automatically)...
+echo [*] Launching AI Tuner (backend starts automatically)...
 npx electron .

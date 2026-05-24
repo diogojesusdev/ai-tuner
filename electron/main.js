@@ -1,6 +1,6 @@
 /**
- * PitWall - Electron Main Process
- * Handles: transparent window, Gemini API, WebSocket client, IPC
+ * AI Tuner - Electron Main Process
+ * Handles: transparent window, Gemini API, WebSocket client, IPC, auto-updates
  */
 
 const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
@@ -8,6 +8,11 @@ const path = require('path');
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
 const { GoogleGenAI } = require('@google/genai');
+const { autoUpdater } = require('electron-updater');
+
+// Auto-updater configuration
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
 
 let mainWindow = null;
 let wsConnection = null;
@@ -552,6 +557,57 @@ ipcMain.handle('save-tune', async (event, { vehicleId, data }) => {
     updates: data,
   });
   return { success: true };
+});
+
+// ============ Auto-Update ============
+
+ipcMain.handle('get-app-version', async () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('check-for-updates', async () => {
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    if (result && result.updateInfo) {
+      return { available: true, version: result.updateInfo.version };
+    }
+    return { available: false };
+  } catch (e) {
+    console.error('[Update] Check failed:', e.message);
+    return { available: false, error: e.message };
+  }
+});
+
+ipcMain.handle('download-update', async () => {
+  try {
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('install-update', async () => {
+  autoUpdater.quitAndInstall();
+});
+
+// Auto-update events → renderer
+autoUpdater.on('update-available', (info) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-available', { version: info.version });
+  }
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-progress', { percent: progress.percent });
+  }
+});
+
+autoUpdater.on('update-downloaded', () => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-downloaded');
+  }
 });
 
 // ============ Shortcut Registration ============

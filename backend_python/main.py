@@ -1,5 +1,5 @@
 """
-PitWall Backend - Core asyncio loop.
+AI Tuner Backend - Core asyncio loop.
 Manages UDP telemetry ingestion, WebSocket broadcasting, and voice I/O.
 """
 
@@ -25,8 +25,8 @@ with open(CONFIG_PATH, "r") as f:
 CAR_MEMORY_PATH = Path(__file__).parent / "car_memory.json"
 
 
-class PitWallBackend:
-    """Main backend orchestrator for PitWall."""
+class AITunerBackend:
+    """Main backend orchestrator for AI Tuner."""
 
     def __init__(self):
         self.adapter = ForzaAdapter(port=CONFIG["telemetry"]["udp_port"])
@@ -48,7 +48,7 @@ class PitWallBackend:
 
     async def start(self):
         """Start all backend services."""
-        print("[PitWall] Starting backend...")
+        print("[AITuner] Starting backend...")
         self._running = True
 
         # Initialize voice engines in background threads
@@ -63,7 +63,7 @@ class PitWallBackend:
         async with websockets.serve(
             self._ws_handler, ws_host, ws_port
         ) as ws_server:
-            print(f"[PitWall] WebSocket server on ws://{ws_host}:{ws_port}")
+            print(f"[AITuner] WebSocket server on ws://{ws_host}:{ws_port}")
 
             # Run telemetry and hotkey tasks concurrently
             await asyncio.gather(
@@ -338,24 +338,24 @@ class PitWallBackend:
         """Gracefully stop all services."""
         self._running = False
         self.tts.stop()
-        print("[PitWall] Backend stopped.")
+        print("[AITuner] Backend stopped.")
 
 
 async def main():
     """Entry point."""
-    backend = PitWallBackend()
+    backend = AITunerBackend()
     try:
         await backend.start()
     except KeyboardInterrupt:
         backend.stop()
     except Exception as e:
-        print(f"[PitWall] Fatal error: {e}")
+        print(f"[AITuner] Fatal error: {e}")
         backend.stop()
         raise
 
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("  PitWall Backend - AI Race Engineer")
+    print("  AI Tuner Backend - AI Race Engineer")
     print("=" * 50)
     asyncio.run(main())

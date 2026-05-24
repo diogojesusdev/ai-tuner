@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Key, Cpu, Save, Mic, Keyboard } from 'lucide-react';
+import { ArrowLeft, Key, Cpu, Save, Mic, Keyboard, Download, RefreshCw } from 'lucide-react';
 
 /**
  * SettingsPanel - Full-page settings view.
@@ -41,6 +41,9 @@ function SettingsPanel({ onClose }) {
   const [telemetryWindow, setTelemetryWindow] = useState(5);
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
+  const [appVersion, setAppVersion] = useState('');
+  const [updateStatus, setUpdateStatus] = useState(''); // '', 'checking', 'available', 'downloading', 'ready', 'uptodate'
+  const [updateVersion, setUpdateVersion] = useState('');
 
   // Load saved settings from localStorage
   useEffect(() => {
@@ -54,7 +57,38 @@ function SettingsPanel({ onClose }) {
     setPttKey(savedPtt);
     setToggleOverlay(savedToggle);
     setTelemetryWindow(parseInt(savedWindow, 10));
+
+    // Load app version
+    if (window.pitwall?.getAppVersion) {
+      window.pitwall.getAppVersion().then(v => setAppVersion(v));
+    }
   }, []);
+
+  const handleCheckUpdate = async () => {
+    if (!window.pitwall?.checkForUpdates) return;
+    setUpdateStatus('checking');
+    const result = await window.pitwall.checkForUpdates();
+    if (result.available) {
+      setUpdateStatus('available');
+      setUpdateVersion(result.version);
+    } else {
+      setUpdateStatus('uptodate');
+      setTimeout(() => setUpdateStatus(''), 3000);
+    }
+  };
+
+  const handleDownloadUpdate = async () => {
+    if (!window.pitwall?.downloadUpdate) return;
+    setUpdateStatus('downloading');
+    await window.pitwall.downloadUpdate();
+    setUpdateStatus('ready');
+  };
+
+  const handleInstallUpdate = () => {
+    if (window.pitwall?.installUpdate) {
+      window.pitwall.installUpdate();
+    }
+  };
 
   const handleSave = async () => {
     if (!apiKey.trim()) {
@@ -245,6 +279,65 @@ function SettingsPanel({ onClose }) {
             PTT key requires a backend restart to take effect.
           </p>
         </div>
+
+        {/* Version & Updates */}
+        <section className="pt-3 border-t border-gray-800/50">
+          <h3 className="text-[10px] text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Download size={10} />
+            Version & Updates
+          </h3>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-gray-400">Current Version</span>
+              <span className="text-[10px] text-gray-200 font-medium">
+                {appVersion || 'dev'}
+              </span>
+            </div>
+            <div>
+              {updateStatus === '' && (
+                <button
+                  onClick={handleCheckUpdate}
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded bg-gray-800/50 text-gray-300 border border-gray-700/30 hover:bg-gray-700/50 transition-colors text-[10px]"
+                >
+                  <RefreshCw size={10} />
+                  Check for Updates
+                </button>
+              )}
+              {updateStatus === 'checking' && (
+                <span className="text-[10px] text-gray-400">Checking...</span>
+              )}
+              {updateStatus === 'uptodate' && (
+                <span className="text-[10px] text-pit-accent">✓ You're up to date</span>
+              )}
+              {updateStatus === 'available' && (
+                <div className="space-y-1.5">
+                  <span className="text-[10px] text-pit-info">
+                    v{updateVersion} available!
+                  </span>
+                  <button
+                    onClick={handleDownloadUpdate}
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded bg-pit-accent/20 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/30 transition-colors text-[10px]"
+                  >
+                    <Download size={10} />
+                    Download Update
+                  </button>
+                </div>
+              )}
+              {updateStatus === 'downloading' && (
+                <span className="text-[10px] text-pit-warn">Downloading...</span>
+              )}
+              {updateStatus === 'ready' && (
+                <button
+                  onClick={handleInstallUpdate}
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded bg-pit-accent/20 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/30 transition-colors text-[10px]"
+                >
+                  <Download size={10} />
+                  Restart & Install
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

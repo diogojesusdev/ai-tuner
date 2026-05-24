@@ -1,7 +1,7 @@
 {
-  "name": "pitwall-overlay",
+  "name": "ai-tuner",
   "version": "1.0.0",
-  "description": "PitWall - AI Race Engineer Overlay for Racing Games",
+  "description": "AI Tuner - AI Race Engineer Overlay for Forza Horizon 6",
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
@@ -12,14 +12,15 @@
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
+    "electron-updater": "^6.8.3",
     "lucide-react": "^0.300.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "ws": "^8.16.0"
   },
   "build": {
-    "appId": "com.pitwall.overlay",
-    "productName": "PitWall",
+    "appId": "com.aituner.app",
+    "productName": "AI Tuner",
     "directories": {
       "output": "dist/installer"
     },
@@ -30,7 +31,7 @@
     ],
     "extraResources": [
       {
-        "from": "dist/python/pitwall-backend",
+        "from": "backend_python",
         "to": "python-backend"
       }
     ],
@@ -44,7 +45,14 @@
       "installerHeaderIcon": null,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "diogojesusdev",
+        "repo": "ai-tuner"
+      }
+    ]
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

@@ -9,7 +9,8 @@ export default {
       colors: {
         'pit-dark': '#0a0a0f',
         'pit-panel': 'rgba(15, 15, 25, 0.85)',
-        'pit-accent': '#00ff88',
+        'pit-accent': '#ff2d55',
+        'pit-secondary': '#4da6ff',
         'pit-warn': '#ff6b35',
         'pit-danger': '#ff2d55',
         'pit-info': '#4da6ff',

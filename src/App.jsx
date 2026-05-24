@@ -165,7 +165,7 @@ function App() {
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-800/50"
            style={{ WebkitAppRegion: 'drag' }}>
         <GripVertical size={12} className="text-gray-600" />
-        <span className="text-[10px] font-medium text-gray-400 flex-1">PITWALL</span>
+        <span className="text-[10px] font-medium text-gray-400 flex-1">AI TUNER</span>
         <button
           onClick={() => setShowSettings(!showSettings)}
           className={`hover:text-pit-accent transition-colors ${showSettings ? 'text-pit-accent' : 'text-gray-500'}`}

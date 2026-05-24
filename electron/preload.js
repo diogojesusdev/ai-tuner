@@ -1,5 +1,5 @@
 /**
- * PitWall - Electron Preload Script
+ * AI Tuner - Electron Preload Script
  * Exposes safe IPC bridge between main process and React renderer.
  */
 
@@ -22,6 +22,21 @@ contextBridge.exposeInMainWorld('pitwall', {
   // Tune sheet
   getTune: (vehicleId) => ipcRenderer.invoke('get-tune', { vehicleId }),
   saveTune: (vehicleId, data) => ipcRenderer.invoke('save-tune', { vehicleId, data }),
+  
+  // Auto-update
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  installUpdate: () => ipcRenderer.invoke('install-update'),
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on('update-available', (event, data) => callback(data));
+  },
+  onUpdateProgress: (callback) => {
+    ipcRenderer.on('update-progress', (event, data) => callback(data));
+  },
+  onUpdateDownloaded: (callback) => {
+    ipcRenderer.on('update-downloaded', (event) => callback());
+  },
   
   // Event listeners from main process
   onTelemetryUpdate: (callback) => {
