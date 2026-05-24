@@ -608,6 +608,11 @@ ipcMain.handle('set-ptt-key', async (event, { key }) => {
   return { success: true };
 });
 
+ipcMain.handle('set-stt-model', async (event, { model }) => {
+  sendToBackend('SET_STT_MODEL', { model });
+  return { success: true };
+});
+
 ipcMain.handle('set-shortcuts', async (event, { newShortcuts }) => {
   // Unregister old shortcuts
   globalShortcut.unregisterAll();

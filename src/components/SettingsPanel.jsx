@@ -10,6 +10,14 @@ const AVAILABLE_MODELS = [
   { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
 ];
 
+const STT_MODELS = [
+  { id: 'tiny', name: 'Tiny', desc: '~75 MB RAM · Fastest, lower accuracy' },
+  { id: 'base', name: 'Base', desc: '~140 MB RAM · Good for clear speech' },
+  { id: 'small', name: 'Small (Recommended)', desc: '~460 MB RAM · Best balance of speed & accuracy' },
+  { id: 'medium', name: 'Medium', desc: '~1.5 GB RAM · Near-perfect, slower' },
+  { id: 'large-v3', name: 'Large V3', desc: '~3 GB RAM · Best accuracy, GPU recommended' },
+];
+
 const PTT_KEY_OPTIONS = [
   { id: 'caps_lock', name: 'CapsLock' },
   { id: 'scroll_lock', name: 'ScrollLock' },
@@ -39,6 +47,7 @@ function SettingsPanel({ onClose }) {
   const [pttKey, setPttKey] = useState('caps_lock');
   const [inputDevice, setInputDevice] = useState('');
   const [inputDevices, setInputDevices] = useState([]);
+  const [sttModel, setSttModel] = useState('base');
   const [toggleOverlay, setToggleOverlay] = useState('F10');
   const [telemetryWindow, setTelemetryWindow] = useState(5);
   const [status, setStatus] = useState('');
@@ -54,11 +63,13 @@ function SettingsPanel({ onClose }) {
     const savedToggle = localStorage.getItem('pitwall_shortcut_toggle') || 'F10';
     const savedWindow = localStorage.getItem('pitwall_telemetry_window') || '5';
     const savedDevice = localStorage.getItem('pitwall_input_device') || '';
+    const savedSttModel = localStorage.getItem('pitwall_stt_model') || 'base';
     setApiKey(savedKey);
     setModel(savedModel);
     setPttKey(savedPtt);
     setToggleOverlay(savedToggle);
     setTelemetryWindow(parseInt(savedWindow, 10));
+    setSttModel(savedSttModel);
     // Only use saved device if it's a valid numeric index
     const validDevice = savedDevice && /^\d+$/.test(savedDevice) ? savedDevice : '';
     setInputDevice(validDevice);
@@ -137,6 +148,7 @@ function SettingsPanel({ onClose }) {
       localStorage.setItem('pitwall_shortcut_toggle', toggleOverlay);
       localStorage.setItem('pitwall_telemetry_window', String(telemetryWindow));
       localStorage.setItem('pitwall_input_device', inputDevice);
+      localStorage.setItem('pitwall_stt_model', sttModel);
 
       // Send to Electron main process
       if (window.pitwall && apiKey.trim()) {
@@ -146,6 +158,9 @@ function SettingsPanel({ onClose }) {
         await window.pitwall.setTelemetryWindow(telemetryWindow);
         if (inputDevice && inputDevice !== '') {
           await window.pitwall.setInputDevice(parseInt(inputDevice, 10));
+        }
+        if (window.pitwall.setSttModel) {
+          await window.pitwall.setSttModel(sttModel);
         }
         if (result.success) {
           setStatus('✓ Saved');
@@ -157,7 +172,7 @@ function SettingsPanel({ onClose }) {
     }, 500); // debounce 500ms
 
     return () => clearTimeout(timeout);
-  }, [apiKey, model, pttKey, toggleOverlay, telemetryWindow, inputDevice]);
+  }, [apiKey, model, pttKey, toggleOverlay, telemetryWindow, inputDevice, sttModel]);
 
   const formatShortcutLabel = (s) => {
     return s.replace('CommandOrControl+', 'Ctrl+').replace('Alt+', 'Alt+');
@@ -246,6 +261,24 @@ function SettingsPanel({ onClose }) {
                   <option key={k.id} value={k.id}>{k.name}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 mb-1 block">Speech Recognition Model</label>
+              <select
+                value={sttModel}
+                onChange={(e) => setSttModel(e.target.value)}
+                className="w-full bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-pit-accent/50"
+              >
+                {STT_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+              <p className="text-[9px] text-gray-600 mt-1">
+                {STT_MODELS.find(m => m.id === sttModel)?.desc || ''}
+              </p>
+              <p className="text-[9px] text-gray-600 mt-0.5">
+                Model downloads on first use and stays cached locally.
+              </p>
             </div>
           </div>
         </section>

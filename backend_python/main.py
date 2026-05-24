@@ -150,6 +150,11 @@ class AITunerBackend:
                 self.stt.set_device(device_index)
                 print(f"[STT] Input device set to index: {device_index}")
 
+            elif msg_type == "SET_STT_MODEL":
+                # Change STT model (downloads on first use, cached after)
+                new_model = msg.get("data", {}).get("model", "base")
+                self._change_stt_model(new_model)
+
         except json.JSONDecodeError:
             print(f"[WS] Invalid JSON received: {raw[:100]}")
         except Exception as e:
@@ -404,6 +409,25 @@ class AITunerBackend:
                 json.dump(cfg, f, indent=2)
         except Exception as e:
             print(f"[Hotkey] Failed to save PTT key: {e}")
+
+    def _change_stt_model(self, new_model: str):
+        """Change STT model at runtime. Downloads on first use, then cached."""
+        if new_model == self.stt.model_size:
+            print(f"[STT] Already using model: {new_model}")
+            return
+        print(f"[STT] Switching model from '{self.stt.model_size}' to '{new_model}'...")
+        self.stt.model_size = new_model
+        self.stt.model = None
+        self.stt.initialize()
+        # Persist to config
+        try:
+            with open(CONFIG_PATH, "r") as f:
+                cfg = json.load(f)
+            cfg["voice"]["stt_model"] = new_model
+            with open(CONFIG_PATH, "w") as f:
+                json.dump(cfg, f, indent=2)
+        except Exception as e:
+            print(f"[STT] Failed to save model preference: {e}")
 
     def _get_input_devices(self) -> list:
         """List available audio input devices (deduplicated, WASAPI preferred)."""

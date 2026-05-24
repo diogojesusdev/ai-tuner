@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('pitwall', {
   // Settings
   setApiKey: (key, model) => ipcRenderer.invoke('set-api-key', { key, model }),
   setPttKey: (key) => ipcRenderer.invoke('set-ptt-key', { key }),
+  setSttModel: (model) => ipcRenderer.invoke('set-stt-model', { model }),
   setShortcuts: (newShortcuts) => ipcRenderer.invoke('set-shortcuts', { newShortcuts }),
   getShortcuts: () => ipcRenderer.invoke('get-shortcuts'),
   setTelemetryWindow: (minutes) => ipcRenderer.invoke('set-telemetry-window', { minutes }),
