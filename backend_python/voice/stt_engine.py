@@ -40,6 +40,7 @@ class STTEngine:
         self._sample_rate = 16000
         self._channels = 1
         self._input_device = None  # None = system default
+        self._actual_sample_rate = self._sample_rate  # May differ from _sample_rate if device doesn't support 16kHz
         self._record_error: Optional[str] = None
         self._init_error: Optional[str] = None
 
@@ -98,15 +99,22 @@ class STTEngine:
         try:
             import sounddevice as sd
 
+            # Query the device's native sample rate (some don't support 16kHz directly)
+            device_info = sd.query_devices(self._input_device, 'input')
+            native_rate = int(device_info['default_samplerate'])
+            # Use native rate if 16kHz isn't supported, then resample later
+            use_rate = self._sample_rate if native_rate == self._sample_rate else native_rate
+
             def callback(indata, frames, time_info, status):
                 if status:
                     print(f"[STT] Audio stream status: {status}")
                 if self.is_recording:
                     self._audio_frames.append(indata.copy())
 
+            self._actual_sample_rate = use_rate
             with sd.InputStream(
                 device=self._input_device,
-                samplerate=self._sample_rate,
+                samplerate=use_rate,
                 channels=self._channels,
                 dtype='float32',
                 callback=callback,
@@ -154,6 +162,15 @@ class STTEngine:
 
         # Concatenate audio frames and compute level
         audio_data = np.concatenate(self._audio_frames, axis=0).flatten()
+
+        # Resample to 16kHz if recorded at a different rate
+        if self._actual_sample_rate != self._sample_rate:
+            duration = len(audio_data) / self._actual_sample_rate
+            num_samples = int(duration * self._sample_rate)
+            indices = np.linspace(0, len(audio_data) - 1, num_samples)
+            audio_data = np.interp(indices, np.arange(len(audio_data)), audio_data).astype(np.float32)
+            print(f"[STT] Resampled from {self._actual_sample_rate}Hz to {self._sample_rate}Hz")
+
         audio_duration = len(audio_data) / self._sample_rate
         rms_level = float(np.sqrt(np.mean(audio_data ** 2)))
         peak_level = float(np.max(np.abs(audio_data)))
