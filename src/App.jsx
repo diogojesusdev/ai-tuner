@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import TelemetryHUD from './components/TelemetryHUD';
 import ChatWindow from './components/ChatWindow';
+import TuneSheet from './components/TuneSheet';
 import SettingsPanel from './components/SettingsPanel';
-import { Settings, GripVertical } from 'lucide-react';
+import { Settings, GripVertical, MessageCircle, Wrench } from 'lucide-react';
 
 function App() {
   const [telemetry, setTelemetry] = useState(null);
@@ -12,6 +13,8 @@ function App() {
   const [telemetryActive, setTelemetryActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'tune'
+  const [vehicleId, setVehicleId] = useState(null);
 
   // Auto-open settings if no API key is configured
   useEffect(() => {
@@ -19,7 +22,7 @@ function App() {
     if (!savedKey) {
       setShowSettings(true);
     } else if (window.pitwall) {
-      const savedModel = localStorage.getItem('pitwall_model') || 'gemini-2.5-flash';
+      const savedModel = localStorage.getItem('pitwall_model') || 'gemini-3.1-flash-lite';
       window.pitwall.setApiKey(savedKey, savedModel);
     }
   }, []);
@@ -30,6 +33,9 @@ function App() {
     window.pitwall.onTelemetryUpdate((data) => {
       setTelemetry(data);
       if (!telemetryActive) setTelemetryActive(true);
+      if (data.vehicle_id && data.vehicle_id !== vehicleId) {
+        setVehicleId(data.vehicle_id);
+      }
     });
 
     window.pitwall.onVoiceTranscript((data) => {
@@ -104,7 +110,7 @@ function App() {
         </button>
       </div>
 
-      {/* Content area: either Settings OR Telemetry+Chat */}
+      {/* Content area: Settings OR Main view */}
       {showSettings ? (
         <SettingsPanel onClose={() => setShowSettings(false)} />
       ) : (
@@ -112,15 +118,45 @@ function App() {
           {/* Telemetry HUD (compact speed/RPM bar) */}
           <TelemetryHUD telemetry={telemetry} telemetryActive={telemetryActive} />
 
-          {/* Chat Window (takes remaining space) */}
+          {/* Tab navigation */}
+          <div className="flex border-b border-gray-800/50 px-2">
+            <button
+              onClick={() => setActiveTab('chat')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-b-2 transition-colors ${
+                activeTab === 'chat'
+                  ? 'border-pit-accent text-pit-accent'
+                  : 'border-transparent text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <MessageCircle size={12} />
+              Engineer
+            </button>
+            <button
+              onClick={() => setActiveTab('tune')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-b-2 transition-colors ${
+                activeTab === 'tune'
+                  ? 'border-pit-accent text-pit-accent'
+                  : 'border-transparent text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <Wrench size={12} />
+              Tune
+            </button>
+          </div>
+
+          {/* Tab content */}
           <div className="flex-1 min-h-0">
-            <ChatWindow
-              messages={messages}
-              pendingChanges={pendingChanges}
-              onConfirmChanges={handleConfirmChanges}
-              onSendMessage={handleSendMessage}
-              isListening={isListening}
-            />
+            {activeTab === 'chat' ? (
+              <ChatWindow
+                messages={messages}
+                pendingChanges={pendingChanges}
+                onConfirmChanges={handleConfirmChanges}
+                onSendMessage={handleSendMessage}
+                isListening={isListening}
+              />
+            ) : (
+              <TuneSheet vehicleId={vehicleId} />
+            )}
           </div>
         </div>
       )}

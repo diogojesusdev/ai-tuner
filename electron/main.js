@@ -17,7 +17,7 @@ let telemetryReceived = false;
 
 // State
 let apiKey = '';
-let modelName = 'gemini-2.5-flash';
+let modelName = 'gemini-3.1-flash-lite';
 let pendingChanges = [];
 let currentVehicleId = null;
 
@@ -36,7 +36,10 @@ You MUST reply strictly adhering to the following JSON schema:
   "reply": "Your conversational explanation here",
   "pending_changes": [
     { "id": "unique-change-id", "action": "Description of the specific adjustment" }
-  ]
+  ],
+  "tune_updates": {
+    "key": "new_value"
+  }
 }
 
 Rules:
@@ -44,6 +47,9 @@ Rules:
 - "pending_changes" is an array of specific, actionable tuning adjustments the driver should make.
 - Each change must have a unique "id" (use kebab-case like "rear-spring-soften") and a clear "action" string.
 - If you have no changes to suggest (just conversation), use an empty array for "pending_changes".
+- "tune_updates" is an optional object with tune field keys and their new absolute values AFTER the adjustment. Use these keys: tire_pressure_fl, tire_pressure_fr, tire_pressure_rl, tire_pressure_rr, camber_fl, camber_fr, camber_rl, camber_rr, toe_fl, toe_fr, toe_rl, toe_rr, spring_front, spring_rear, ride_height_front, ride_height_rear, bump_front, bump_rear, rebound_front, rebound_rear, arb_front, arb_rear, aero_front, aero_rear, brake_balance, brake_pressure, diff_accel, diff_decel, final_drive.
+- Only include tune_updates if the driver confirms they applied a change and tells you the new value, OR if you can compute the new absolute value from context.
+- If you don't know the absolute value, omit tune_updates entirely.
 - Always consider the telemetry data AND driver feedback together.
 - Reference specific telemetry values when explaining your reasoning.`;
 
@@ -152,6 +158,10 @@ function handleBackendMessage(msg) {
       break;
 
     case 'CAR_MEMORY':
+      if (pendingTuneResolve) {
+        pendingTuneResolve(msg.data);
+        pendingTuneResolve = null;
+      }
       mainWindow.webContents.send('car-memory', msg.data);
       break;
   }
@@ -233,6 +243,17 @@ async function processUserMessage(userText) {
       pendingChanges = parsed.pending_changes;
     }
 
+    // If LLM provided tune updates, save and notify UI
+    if (parsed.tune_updates && Object.keys(parsed.tune_updates).length > 0) {
+      sendToBackend('UPDATE_CAR_MEMORY', {
+        vehicle_id: currentVehicleId,
+        updates: { tune: parsed.tune_updates },
+      });
+      if (mainWindow) {
+        mainWindow.webContents.send('tune-update', { tune: parsed.tune_updates });
+      }
+    }
+
     // Send response to renderer
     if (mainWindow) {
       mainWindow.webContents.send('ai-response', parsed);
@@ -298,6 +319,32 @@ ipcMain.handle('get-shortcuts', async () => {
 
 ipcMain.handle('get-pending-changes', async () => {
   return { changes: pendingChanges };
+});
+
+let pendingTuneResolve = null;
+
+ipcMain.handle('get-tune', async (event, { vehicleId }) => {
+  if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
+    return null;
+  }
+  return new Promise((resolve) => {
+    pendingTuneResolve = resolve;
+    sendToBackend('GET_CAR_MEMORY', { vehicle_id: vehicleId });
+    setTimeout(() => {
+      if (pendingTuneResolve === resolve) {
+        pendingTuneResolve = null;
+        resolve(null);
+      }
+    }, 2000);
+  });
+});
+
+ipcMain.handle('save-tune', async (event, { vehicleId, data }) => {
+  sendToBackend('UPDATE_CAR_MEMORY', {
+    vehicle_id: vehicleId || currentVehicleId,
+    updates: data,
+  });
+  return { success: true };
 });
 
 // ============ Shortcut Registration ============

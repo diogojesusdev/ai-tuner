@@ -17,6 +17,10 @@ contextBridge.exposeInMainWorld('pitwall', {
   confirmChanges: (confirmedIds) => ipcRenderer.invoke('confirm-changes', { confirmedIds }),
   getPendingChanges: () => ipcRenderer.invoke('get-pending-changes'),
   
+  // Tune sheet
+  getTune: (vehicleId) => ipcRenderer.invoke('get-tune', { vehicleId }),
+  saveTune: (vehicleId, data) => ipcRenderer.invoke('save-tune', { vehicleId, data }),
+  
   // Event listeners from main process
   onTelemetryUpdate: (callback) => {
     ipcRenderer.on('telemetry-update', (event, data) => callback(data));
@@ -38,6 +42,9 @@ contextBridge.exposeInMainWorld('pitwall', {
   },
   onTelemetryStatus: (callback) => {
     ipcRenderer.on('telemetry-status', (event, data) => callback(data));
+  },
+  onTuneUpdate: (callback) => {
+    ipcRenderer.on('tune-update', (event, data) => callback(data));
   },
 
   // Cleanup listeners

@@ -287,7 +287,7 @@ class PitWallBackend:
             return {}
 
     def _save_car_memory(self, vehicle_id, updates: dict):
-        """Save updated car memory."""
+        """Save updated car memory including tune values."""
         try:
             with open(CAR_MEMORY_PATH, "r") as f:
                 data = json.load(f)
@@ -299,6 +299,7 @@ class PitWallBackend:
             data["cars"][vid] = {
                 "discipline": "unknown",
                 "past_modifications": [],
+                "tune": {},
             }
 
         car = data["cars"][vid]
@@ -308,8 +309,10 @@ class PitWallBackend:
             car.setdefault("past_modifications", []).append(
                 updates["modification"]
             )
-        if "make_model" in updates:
-            car["make_model"] = updates["make_model"]
+        if "make_model" in updates or "car_name" in updates:
+            car["car_name"] = updates.get("car_name", updates.get("make_model", ""))
+        if "tune" in updates:
+            car.setdefault("tune", {}).update(updates["tune"])
 
         data["cars"][vid] = car
         with open(CAR_MEMORY_PATH, "w") as f:
