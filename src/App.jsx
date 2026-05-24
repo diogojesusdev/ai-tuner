@@ -3,7 +3,7 @@ import TelemetryHUD from './components/TelemetryHUD';
 import ChatWindow from './components/ChatWindow';
 import TuneSheet from './components/TuneSheet';
 import SettingsPanel from './components/SettingsPanel';
-import { Settings, GripVertical, MessageCircle, Wrench, X, Square, History, Plus } from 'lucide-react';
+import { Settings, GripVertical, MessageCircle, Wrench, X, Square, History, Plus, Trash2 } from 'lucide-react';
 
 const STATE_LABELS = {
   IDLE: { text: 'Idle', color: 'text-gray-500' },
@@ -162,6 +162,15 @@ function App() {
       setCarName(null);
     }
   }, [activeSessionId]);
+
+  const deleteAllSessions = useCallback(() => {
+    setSessions([]);
+    setActiveSessionId(null);
+    setMessages([]);
+    setCarName(null);
+    localStorage.removeItem('pitwall_sessions');
+    localStorage.removeItem('pitwall_active_session');
+  }, []);
 
   // Auto-open settings if no API key is configured
   useEffect(() => {
@@ -449,9 +458,19 @@ function App() {
               <div className="h-full flex flex-col">
                 <div className="px-4 py-2 border-b border-gray-800/50 flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-200">Sessions</span>
+                  {sessions.length > 0 && (
+                    <button
+                      onClick={() => { if (confirm('Delete all sessions?')) deleteAllSessions(); }}
+                      className="ml-auto flex items-center gap-1 px-2 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 text-[10px] transition-colors"
+                      title="Delete all sessions"
+                    >
+                      <Trash2 size={10} />
+                      Clear All
+                    </button>
+                  )}
                   <button
                     onClick={() => { createNewSession(); setActiveTab('chat'); }}
-                    className="ml-auto flex items-center gap-1 px-2 py-1 rounded bg-pit-accent/20 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/30 text-[10px] transition-colors"
+                    className={`${sessions.length === 0 ? 'ml-auto' : ''} flex items-center gap-1 px-2 py-1 rounded bg-pit-accent/20 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/30 text-[10px] transition-colors`}
                   >
                     <Plus size={10} />
                     New
