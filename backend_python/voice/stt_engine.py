@@ -45,8 +45,19 @@ class STTEngine:
 
     def set_device(self, device_index):
         """Set the audio input device by index. None = system default."""
-        self._input_device = device_index
-        print(f"[STT] Input device set to: {device_index}")
+        # Validate: must be None or a valid integer index
+        if device_index is None or device_index == '':
+            self._input_device = None
+            print("[STT] Input device set to: system default")
+            return
+        try:
+            idx = int(device_index)
+            self._input_device = idx
+            print(f"[STT] Input device set to index: {idx}")
+        except (ValueError, TypeError):
+            # Invalid device ID (e.g., browser hash) — fall back to default
+            self._input_device = None
+            print(f"[STT] Invalid device '{device_index}', using system default")
 
     def initialize(self):
         """Load the whisper model. Call once at startup."""

@@ -59,20 +59,33 @@ function SettingsPanel({ onClose }) {
     setPttKey(savedPtt);
     setToggleOverlay(savedToggle);
     setTelemetryWindow(parseInt(savedWindow, 10));
-    setInputDevice(savedDevice);
+    // Only use saved device if it's a valid numeric index
+    const validDevice = savedDevice && /^\d+$/.test(savedDevice) ? savedDevice : '';
+    setInputDevice(validDevice);
+    if (savedDevice && !validDevice) {
+      // Clear invalid (hash-based) saved device
+      localStorage.setItem('pitwall_input_device', '');
+    }
 
-    // Load available input devices from browser API (works in Electron)
+    // Load available input devices from Python backend (uses sounddevice indices)
     async function loadDevices() {
       try {
-        // Request permission first (triggers browser prompt if needed)
+        if (window.pitwall?.getInputDevices) {
+          const devices = await window.pitwall.getInputDevices();
+          if (devices && Array.isArray(devices) && devices.length > 0) {
+            setInputDevices(devices);
+            return;
+          }
+        }
+        // Fallback: use browser API but map to index numbers
         await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => s.getTracks().forEach(t => t.stop()));
         const devices = await navigator.mediaDevices.enumerateDevices();
         const audioInputs = devices
-          .filter(d => d.kind === 'audioinput')
+          .filter(d => d.kind === 'audioinput' && d.deviceId !== 'default' && d.deviceId !== 'communications')
           .map((d, i) => ({
-            index: d.deviceId,
+            index: i,
             name: d.label || `Microphone ${i + 1}`,
-            default: d.deviceId === 'default',
+            default: i === 0,
           }));
         setInputDevices(audioInputs);
       } catch (e) {
@@ -132,7 +145,7 @@ function SettingsPanel({ onClose }) {
         await window.pitwall.setShortcuts({ toggleOverlay });
         await window.pitwall.setTelemetryWindow(telemetryWindow);
         if (inputDevice && inputDevice !== '') {
-          await window.pitwall.setInputDevice(inputDevice);
+          await window.pitwall.setInputDevice(parseInt(inputDevice, 10));
         }
         if (result.success) {
           setStatus('✓ Saved');
