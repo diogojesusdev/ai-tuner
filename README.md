@@ -26,7 +26,7 @@ Real-time telemetry analysis, intelligent tuning suggestions, and per-car setup 
 - Node.js 18+
 - Python 3.11+
 - Forza Horizon 6 with Data Out enabled (UDP port 5300)
-- Free [Gemini API key](https://aistudio.google.com)
+- [Gemini API key](https://aistudio.google.com)
 
 ### Run from source
 
