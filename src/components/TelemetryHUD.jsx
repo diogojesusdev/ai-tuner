@@ -5,7 +5,7 @@ import { Wifi, WifiOff } from 'lucide-react';
  * TelemetryHUD - Compact speed/RPM display with connection status icon.
  */
 
-function TelemetryHUD({ telemetry, telemetryActive }) {
+function TelemetryHUD({ telemetry, telemetryActive, carName }) {
   const speed = telemetry ? Math.round(telemetry.speed_kmh) : '--';
   const rpm = telemetry ? Math.round(telemetry.engine_rpm) : '--';
   const gear = telemetry ? telemetry.current_gear : '-';
@@ -22,6 +22,13 @@ function TelemetryHUD({ telemetry, telemetryActive }) {
           <WifiOff size={14} className="text-pit-danger animate-pulse" />
         )}
       </div>
+
+      {/* Car name (shown when identified) */}
+      {carName && (
+        <span className="text-[10px] text-gray-400 truncate max-w-[100px]" title={carName}>
+          {carName}
+        </span>
+      )}
 
       {/* Speed */}
       <div className="flex items-baseline gap-1">

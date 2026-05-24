@@ -34,6 +34,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'tune'
   const [vehicleId, setVehicleId] = useState(null);
   const [agentState, setAgentState] = useState('IDLE');
+  const [carName, setCarName] = useState(null);
 
   // Auto-open settings if no API key is configured
   useEffect(() => {
@@ -90,6 +91,12 @@ function App() {
       setAgentState(data.state);
     });
 
+    window.pitwall.onCarMemory((data) => {
+      if (data && data.car_name) {
+        setCarName(data.car_name);
+      }
+    });
+
     return () => {
       if (window.pitwall) {
         window.pitwall.removeAllListeners('telemetry-update');
@@ -99,6 +106,7 @@ function App() {
         window.pitwall.removeAllListeners('telemetry-status');
         window.pitwall.removeAllListeners('listening-state');
         window.pitwall.removeAllListeners('agent-state');
+        window.pitwall.removeAllListeners('car-memory');
       }
     };
   }, []);
@@ -119,9 +127,9 @@ function App() {
   }, []);
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col glass-panel">
       {/* Title Bar (draggable to move window) */}
-      <div className="flex items-center gap-2 px-3 py-1.5 glass-panel rounded-b-none border-b-0"
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-800/50"
            style={{ WebkitAppRegion: 'drag' }}>
         <GripVertical size={12} className="text-gray-600" />
         <span className="text-[10px] font-medium text-gray-400 flex-1">PITWALL</span>
@@ -140,7 +148,7 @@ function App() {
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Telemetry HUD (compact speed/RPM bar) */}
-          <TelemetryHUD telemetry={telemetry} telemetryActive={telemetryActive} />
+          <TelemetryHUD telemetry={telemetry} telemetryActive={telemetryActive} carName={carName} />
 
           {/* Tab navigation + agent state */}
           <div className="flex items-center border-b border-gray-800/50 px-2">
