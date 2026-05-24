@@ -2,13 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import TelemetryHUD from './components/TelemetryHUD';
 import ChatWindow from './components/ChatWindow';
 import SettingsPanel from './components/SettingsPanel';
-import { Settings } from 'lucide-react';
+import { Settings, MousePointer, Eye } from 'lucide-react';
 
 function App() {
   const [telemetry, setTelemetry] = useState(null);
   const [messages, setMessages] = useState([]);
   const [pendingChanges, setPendingChanges] = useState([]);
   const [backendConnected, setBackendConnected] = useState(false);
+  const [telemetryActive, setTelemetryActive] = useState(false);
+  const [interactMode, setInteractMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showChat, setShowChat] = useState(true);
 
@@ -18,7 +20,6 @@ function App() {
     if (!savedKey) {
       setShowSettings(true);
     } else if (window.pitwall) {
-      // Re-initialize Gemini with saved key on app start
       const savedModel = localStorage.getItem('pitwall_model') || 'gemini-2.5-flash';
       window.pitwall.setApiKey(savedKey, savedModel);
     }
@@ -29,6 +30,7 @@ function App() {
 
     window.pitwall.onTelemetryUpdate((data) => {
       setTelemetry(data);
+      if (!telemetryActive) setTelemetryActive(true);
     });
 
     window.pitwall.onVoiceTranscript((data) => {
@@ -52,12 +54,22 @@ function App() {
       setBackendConnected(data.connected);
     });
 
+    window.pitwall.onTelemetryStatus((data) => {
+      setTelemetryActive(data.receiving);
+    });
+
+    window.pitwall.onInteractMode((data) => {
+      setInteractMode(data.enabled);
+    });
+
     return () => {
       if (window.pitwall) {
         window.pitwall.removeAllListeners('telemetry-update');
         window.pitwall.removeAllListeners('voice-transcript');
         window.pitwall.removeAllListeners('ai-response');
         window.pitwall.removeAllListeners('backend-status');
+        window.pitwall.removeAllListeners('telemetry-status');
+        window.pitwall.removeAllListeners('interact-mode');
       }
     };
   }, []);
@@ -77,26 +89,20 @@ function App() {
     await window.pitwall.sendMessage(text);
   }, []);
 
-  // Document-level detection: when Electron forwards mouse events over
-  // non-transparent pixels, the document receives mouseenter/mouseleave.
-  // This toggles click-through so clicks land on panels vs pass to the game.
-  useEffect(() => {
-    const onEnter = () => {
-      if (window.pitwall) window.pitwall.setClickThrough(false);
-    };
-    const onLeave = () => {
-      if (window.pitwall) window.pitwall.setClickThrough(true);
-    };
-    document.documentElement.addEventListener('mouseenter', onEnter);
-    document.documentElement.addEventListener('mouseleave', onLeave);
-    return () => {
-      document.documentElement.removeEventListener('mouseenter', onEnter);
-      document.documentElement.removeEventListener('mouseleave', onLeave);
-    };
-  }, []);
-
   return (
     <div className="w-screen h-screen relative">
+      {/* Interact Mode Banner */}
+      {interactMode && (
+        <div className="absolute top-0 left-0 right-0 flex justify-center z-50">
+          <div className="glass-panel px-4 py-1.5 mt-2 flex items-center gap-2 border-pit-accent/50 border">
+            <MousePointer size={12} className="text-pit-accent" />
+            <span className="text-xs text-pit-accent font-medium">
+              INTERACT MODE — Click UI elements • Press F9 to lock
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Telemetry HUD - Bottom Left */}
       <div className="absolute bottom-4 left-4">
         <TelemetryHUD telemetry={telemetry} />
@@ -123,16 +129,34 @@ function App() {
           <Settings size={18} className="text-pit-accent" />
         </button>
 
-        {/* Connection Status Indicator */}
-        <div className="mt-2 flex items-center gap-2 glass-panel px-3 py-1.5 text-xs">
-          <div
-            className={`w-2 h-2 rounded-full ${
-              backendConnected ? 'bg-pit-accent' : 'bg-pit-danger'
-            }`}
-          />
-          <span className="text-gray-400">
-            {backendConnected ? 'Backend Connected' : 'Disconnected'}
-          </span>
+        {/* Status Indicators */}
+        <div className="mt-2 space-y-1">
+          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 text-xs">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                backendConnected ? 'bg-pit-accent' : 'bg-pit-danger'
+              }`}
+            />
+            <span className="text-gray-400">
+              {backendConnected ? 'Backend OK' : 'Backend Offline'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 text-xs">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                telemetryActive ? 'bg-pit-accent' : 'bg-pit-warn'
+              }`}
+            />
+            <span className="text-gray-400">
+              {telemetryActive ? 'Telemetry Live' : 'No Telemetry'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 glass-panel px-3 py-1.5 text-xs">
+            <Eye size={10} className="text-gray-500" />
+            <span className="text-gray-500">
+              F9: Interact • F10: Hide • Ctrl+Shift+Q: Quit
+            </span>
+          </div>
         </div>
       </div>
 

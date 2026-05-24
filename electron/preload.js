@@ -34,6 +34,12 @@ contextBridge.exposeInMainWorld('pitwall', {
   onCarMemory: (callback) => {
     ipcRenderer.on('car-memory', (event, data) => callback(data));
   },
+  onInteractMode: (callback) => {
+    ipcRenderer.on('interact-mode', (event, data) => callback(data));
+  },
+  onTelemetryStatus: (callback) => {
+    ipcRenderer.on('telemetry-status', (event, data) => callback(data));
+  },
 
   // Cleanup listeners
   removeAllListeners: (channel) => {

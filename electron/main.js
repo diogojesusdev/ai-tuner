@@ -11,8 +11,10 @@ const { GoogleGenAI } = require('@google/genai');
 let mainWindow = null;
 let wsConnection = null;
 let overlayVisible = true;
+let interactMode = false;  // true = can click UI, false = click-through
 let genaiClient = null;
 let chatSession = null;
+let telemetryReceived = false;
 
 // State
 let apiKey = '';
@@ -58,14 +60,12 @@ function createWindow() {
     },
   });
 
-  // 'floating' level: above normal windows but doesn't invade other desktops
   mainWindow.setAlwaysOnTop(true, 'floating');
 
-  // Start in click-through mode; renderer toggles this on hover
-  mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  // Start in overlay mode (click-through)
+  mainWindow.setIgnoreMouseEvents(true);
 
   if (isDev) {
-    // Try Vite dev server first, fall back to built dist/
     mainWindow.loadURL('http://localhost:5173').catch(() => {
       console.log('[UI] Dev server not running, loading from dist/');
       mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
@@ -123,6 +123,11 @@ function handleBackendMessage(msg) {
 
   switch (msg.type) {
     case 'TELEMETRY_UPDATE':
+      if (!telemetryReceived) {
+        telemetryReceived = true;
+        console.log('[Telemetry] Receiving game data!');
+        mainWindow.webContents.send('telemetry-status', { receiving: true });
+      }
       mainWindow.webContents.send('telemetry-update', msg.data);
       currentVehicleId = msg.data.vehicle_id;
       break;
@@ -269,12 +274,9 @@ ipcMain.handle('set-ptt-key', async (event, { key }) => {
 });
 
 ipcMain.handle('set-click-through', async (event, { ignore }) => {
+  // Keep for API compat but interaction is now hotkey-driven
   if (mainWindow) {
-    if (ignore) {
-      mainWindow.setIgnoreMouseEvents(true, { forward: true });
-    } else {
-      mainWindow.setIgnoreMouseEvents(false);
-    }
+    mainWindow.setIgnoreMouseEvents(ignore);
   }
 });
 
@@ -284,11 +286,24 @@ ipcMain.handle('get-pending-changes', async () => {
 
 // ============ App Lifecycle ============
 
+function setInteractMode(enabled) {
+  if (!mainWindow) return;
+  interactMode = enabled;
+  mainWindow.setIgnoreMouseEvents(!enabled);
+  mainWindow.webContents.send('interact-mode', { enabled });
+  console.log(`[Overlay] Interact mode: ${enabled ? 'ON (click UI)' : 'OFF (click-through)'}`);
+}
+
 app.whenReady().then(() => {
   createWindow();
   connectWebSocket();
 
-  // Global shortcut to toggle overlay visibility (F10)
+  // F9: Toggle interact mode (click UI vs pass-through)
+  globalShortcut.register('F9', () => {
+    setInteractMode(!interactMode);
+  });
+
+  // F10: Toggle overlay visibility
   globalShortcut.register('F10', () => {
     if (!mainWindow) return;
     overlayVisible = !overlayVisible;
@@ -300,7 +315,7 @@ app.whenReady().then(() => {
     }
   });
 
-  // Global shortcut to quit the app (Ctrl+Shift+Q)
+  // Ctrl+Shift+Q: Quit
   globalShortcut.register('CommandOrControl+Shift+Q', () => {
     app.quit();
   });
