@@ -10,6 +10,7 @@ const { spawn } = require('child_process');
 const WebSocket = require('ws');
 const { GoogleGenAI } = require('@google/genai');
 const { autoUpdater } = require('electron-updater');
+const { TUNING_KNOWLEDGE } = require('./tuning_knowledge');
 
 // Auto-updater configuration
 autoUpdater.autoDownload = false;
@@ -123,7 +124,9 @@ You MUST reply as JSON:
 - Reference specific telemetry values when explaining reasoning (e.g., "Your rear slip angle is averaging 12° vs 6° front — classic oversteer").
 - Be concise — the driver is focused on the game. Keep non-technical interactions (identity, discipline, confirmation) to 1-2 sentences max. No filler, no greetings, no "welcome" messages.
 - When telling the driver to go test their changes on track, ALWAYS include user_input_request with type "go_test". This gives them a clear button to press when they're ready.
-- If current tune values are empty/unknown, ask the user to provide their current settings before suggesting changes.`;
+- If current tune values are empty/unknown, ask the user to provide their current settings before suggesting changes.
+
+${TUNING_KNOWLEDGE}`;
 
 function createWindow() {
   const isDev = !app.isPackaged;
