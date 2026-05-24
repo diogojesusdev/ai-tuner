@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --pit-accent: #00ff88;
+  --pit-warn: #ff6b35;
+  --pit-danger: #ff2d55;
+  --pit-info: #4da6ff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: transparent;
+  font-family: 'JetBrains Mono', monospace;
+  color: #e0e0e0;
+  overflow: hidden;
+  user-select: none;
+  -webkit-app-region: no-drag;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 136, 0.3);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 136, 0.5);
+}
+
+/* Glass effect for panels */
+.glass-panel {
+  background: rgba(10, 10, 20, 0.82);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 255, 136, 0.15);
+  border-radius: 8px;
+}
+
+/* Temperature color coding */
+.temp-cold { color: #4da6ff; }
+.temp-optimal { color: #00ff88; }
+.temp-hot { color: #ff6b35; }
+.temp-critical { color: #ff2d55; }
+
+/* Suspension bar animations */
+.susp-bar {
+  transition: height 0.08s linear;
+}
+
+/* Interactive elements should capture mouse */
+.interactive {
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
+}

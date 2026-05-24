@@ -1,0 +1,22 @@
+{
+  "telemetry": {
+    "game": "forza",
+    "udp_port": 5300,
+    "broadcast_rate_hz": 10
+  },
+  "websocket": {
+    "host": "127.0.0.1",
+    "port": 8765
+  },
+  "voice": {
+    "stt_model": "base",
+    "stt_device": "auto",
+    "tts_rate": 180,
+    "tts_voice_index": 0,
+    "push_to_talk_key": "caps_lock"
+  },
+  "hotkeys": {
+    "push_to_talk": "caps_lock",
+    "toggle_overlay": "f10"
+  }
+}

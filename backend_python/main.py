@@ -1,0 +1,317 @@
+"""
+PitWall Backend - Core asyncio loop.
+Manages UDP telemetry ingestion, WebSocket broadcasting, and voice I/O.
+"""
+
+import asyncio
+import json
+import socket
+import time
+import collections
+from pathlib import Path
+from typing import Set
+
+import websockets
+from websockets.server import WebSocketServerProtocol
+
+from telemetry import ForzaAdapter, UniversalTelemetry
+from voice import STTEngine, TTSEngine
+
+# Load configuration
+CONFIG_PATH = Path(__file__).parent / "config.json"
+with open(CONFIG_PATH, "r") as f:
+    CONFIG = json.load(f)
+
+CAR_MEMORY_PATH = Path(__file__).parent / "car_memory.json"
+
+
+class PitWallBackend:
+    """Main backend orchestrator for PitWall."""
+
+    def __init__(self):
+        self.adapter = ForzaAdapter(port=CONFIG["telemetry"]["udp_port"])
+        self.stt = STTEngine(
+            model_size=CONFIG["voice"]["stt_model"],
+            device=CONFIG["voice"]["stt_device"],
+        )
+        self.tts = TTSEngine(
+            rate=CONFIG["voice"]["tts_rate"],
+            voice_index=CONFIG["voice"]["tts_voice_index"],
+        )
+
+        self.ws_clients: Set[WebSocketServerProtocol] = set()
+        self.latest_telemetry: UniversalTelemetry | None = None
+        self.telemetry_history: collections.deque = collections.deque(maxlen=300)
+        self.broadcast_rate = CONFIG["telemetry"]["broadcast_rate_hz"]
+        self._running = False
+        self._ptt_held = False
+
+    async def start(self):
+        """Start all backend services."""
+        print("[PitWall] Starting backend...")
+        self._running = True
+
+        # Initialize voice engines in background threads
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.stt.initialize)
+        await loop.run_in_executor(None, self.tts.initialize)
+
+        # Start WebSocket server
+        ws_host = CONFIG["websocket"]["host"]
+        ws_port = CONFIG["websocket"]["port"]
+
+        async with websockets.serve(
+            self._ws_handler, ws_host, ws_port
+        ) as ws_server:
+            print(f"[PitWall] WebSocket server on ws://{ws_host}:{ws_port}")
+
+            # Run telemetry and hotkey tasks concurrently
+            await asyncio.gather(
+                self._telemetry_loop(),
+                self._broadcast_loop(),
+                self._hotkey_loop(),
+                self._ws_message_loop(),
+            )
+
+    async def _ws_handler(self, websocket: WebSocketServerProtocol):
+        """Handle new WebSocket connections."""
+        self.ws_clients.add(websocket)
+        client_addr = websocket.remote_address
+        print(f"[WS] Client connected: {client_addr}")
+        try:
+            async for message in websocket:
+                await self._handle_ws_message(websocket, message)
+        except websockets.exceptions.ConnectionClosed:
+            pass
+        finally:
+            self.ws_clients.discard(websocket)
+            print(f"[WS] Client disconnected: {client_addr}")
+
+    async def _handle_ws_message(
+        self, websocket: WebSocketServerProtocol, raw: str
+    ):
+        """Process incoming WebSocket messages from Electron."""
+        try:
+            msg = json.loads(raw)
+            msg_type = msg.get("type")
+
+            if msg_type == "PLAY_AUDIO":
+                # Electron requests TTS playback
+                text = msg.get("data", {}).get("text", "")
+                if text:
+                    await self.tts.speak_async(text)
+
+            elif msg_type == "GET_TELEMETRY_SUMMARY":
+                # Electron requests a 30s summary for LLM context
+                summary = self._get_telemetry_summary()
+                await websocket.send(json.dumps({
+                    "type": "TELEMETRY_SUMMARY",
+                    "data": summary
+                }))
+
+            elif msg_type == "GET_CAR_MEMORY":
+                # Electron requests car memory for current vehicle
+                vehicle_id = msg.get("data", {}).get("vehicle_id")
+                memory = self._load_car_memory(vehicle_id)
+                await websocket.send(json.dumps({
+                    "type": "CAR_MEMORY",
+                    "data": memory
+                }))
+
+            elif msg_type == "UPDATE_CAR_MEMORY":
+                # Electron pushes updated car memory
+                vehicle_id = msg.get("data", {}).get("vehicle_id")
+                updates = msg.get("data", {}).get("updates", {})
+                self._save_car_memory(vehicle_id, updates)
+
+        except json.JSONDecodeError:
+            print(f"[WS] Invalid JSON received: {raw[:100]}")
+        except Exception as e:
+            print(f"[WS] Message handling error: {e}")
+
+    async def _ws_message_loop(self):
+        """Placeholder for any periodic WS maintenance."""
+        while self._running:
+            await asyncio.sleep(1.0)
+
+    async def _telemetry_loop(self):
+        """Read UDP telemetry packets from the game."""
+        port = self.adapter.get_port()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(("0.0.0.0", port))
+        sock.setblocking(False)
+        print(f"[Telemetry] Listening on UDP port {port}")
+
+        loop = asyncio.get_event_loop()
+
+        while self._running:
+            try:
+                data = await loop.run_in_executor(
+                    None, lambda: sock.recv(1024)
+                )
+                if data:
+                    telemetry = self.adapter.parse_packet(data)
+                    self.latest_telemetry = telemetry
+                    self.telemetry_history.append(telemetry)
+            except BlockingIOError:
+                await asyncio.sleep(0.001)
+            except Exception as e:
+                await asyncio.sleep(0.01)
+
+    async def _broadcast_loop(self):
+        """Broadcast telemetry to WebSocket clients at configured rate."""
+        interval = 1.0 / self.broadcast_rate
+        
+        while self._running:
+            if self.latest_telemetry and self.ws_clients:
+                message = self.latest_telemetry.to_ws_message()
+                dead_clients = set()
+                for client in self.ws_clients.copy():
+                    try:
+                        await client.send(message)
+                    except websockets.exceptions.ConnectionClosed:
+                        dead_clients.add(client)
+                self.ws_clients -= dead_clients
+            await asyncio.sleep(interval)
+
+    async def _hotkey_loop(self):
+        """Monitor push-to-talk hotkey using pynput."""
+        try:
+            from pynput import keyboard
+        except ImportError:
+            print("[Hotkey] WARNING: pynput not installed. Hotkeys disabled.")
+            print("[Hotkey] Install with: pip install pynput")
+            while self._running:
+                await asyncio.sleep(1.0)
+            return
+
+        ptt_key_name = CONFIG["hotkeys"]["push_to_talk"]
+        
+        # Map config key names to pynput keys
+        key_map = {
+            "caps_lock": keyboard.Key.caps_lock,
+            "scroll_lock": keyboard.Key.scroll_lock,
+            "f9": keyboard.Key.f9,
+            "f10": keyboard.Key.f10,
+            "f11": keyboard.Key.f11,
+            "f12": keyboard.Key.f12,
+        }
+        ptt_key = key_map.get(ptt_key_name, keyboard.Key.caps_lock)
+        loop = asyncio.get_event_loop()
+
+        def on_press(key):
+            if key == ptt_key and not self._ptt_held:
+                self._ptt_held = True
+                self.stt.start_recording()
+
+        def on_release(key):
+            if key == ptt_key and self._ptt_held:
+                self._ptt_held = False
+                # Schedule transcription in the async loop
+                asyncio.run_coroutine_threadsafe(
+                    self._process_voice(), loop
+                )
+
+        listener = keyboard.Listener(
+            on_press=on_press,
+            on_release=on_release,
+        )
+        listener.start()
+        print(f"[Hotkey] Push-to-talk bound to: {ptt_key_name}")
+
+        while self._running:
+            await asyncio.sleep(0.1)
+
+        listener.stop()
+
+    async def _process_voice(self):
+        """Process recorded voice input and broadcast transcript."""
+        text = await self.stt.transcribe_async()
+        if text:
+            # Broadcast voice transcript to Electron
+            message = json.dumps({
+                "type": "VOICE_TRANSCRIPT",
+                "data": {"text": text, "timestamp": time.time()}
+            })
+            for client in self.ws_clients.copy():
+                try:
+                    await client.send(message)
+                except websockets.exceptions.ConnectionClosed:
+                    pass
+
+    def _get_telemetry_summary(self) -> dict:
+        """Generate a 30-second telemetry summary for LLM context."""
+        if not self.telemetry_history:
+            return {}
+        
+        # Get last 30 seconds of data (at ~60Hz that's ~1800 frames,
+        # but we cap at deque maxlen of 300 which is ~30s at 10Hz broadcast)
+        recent = list(self.telemetry_history)
+        if self.latest_telemetry:
+            return self.latest_telemetry.summarize_30s(recent)
+        return {}
+
+    def _load_car_memory(self, vehicle_id) -> dict:
+        """Load car setup memory for a specific vehicle."""
+        try:
+            with open(CAR_MEMORY_PATH, "r") as f:
+                data = json.load(f)
+            return data.get("cars", {}).get(str(vehicle_id), {})
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    def _save_car_memory(self, vehicle_id, updates: dict):
+        """Save updated car memory."""
+        try:
+            with open(CAR_MEMORY_PATH, "r") as f:
+                data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            data = {"cars": {}}
+
+        vid = str(vehicle_id)
+        if vid not in data["cars"]:
+            data["cars"][vid] = {
+                "discipline": "unknown",
+                "past_modifications": [],
+            }
+
+        car = data["cars"][vid]
+        if "discipline" in updates:
+            car["discipline"] = updates["discipline"]
+        if "modification" in updates:
+            car.setdefault("past_modifications", []).append(
+                updates["modification"]
+            )
+        if "make_model" in updates:
+            car["make_model"] = updates["make_model"]
+
+        data["cars"][vid] = car
+        with open(CAR_MEMORY_PATH, "w") as f:
+            json.dump(data, f, indent=2)
+
+    def stop(self):
+        """Gracefully stop all services."""
+        self._running = False
+        self.tts.stop()
+        print("[PitWall] Backend stopped.")
+
+
+async def main():
+    """Entry point."""
+    backend = PitWallBackend()
+    try:
+        await backend.start()
+    except KeyboardInterrupt:
+        backend.stop()
+    except Exception as e:
+        print(f"[PitWall] Fatal error: {e}")
+        backend.stop()
+        raise
+
+
+if __name__ == "__main__":
+    print("=" * 50)
+    print("  PitWall Backend - AI Race Engineer")
+    print("=" * 50)
+    asyncio.run(main())
