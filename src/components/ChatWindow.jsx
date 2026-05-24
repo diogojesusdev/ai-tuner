@@ -178,24 +178,24 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage,
           </div>
           <div className="space-y-1.5 max-h-32 overflow-y-auto">
             {pendingChanges.map((change) => (
-              <label
+              <div
                 key={change.id}
+                onClick={() => toggleChange(change.id)}
                 className="flex items-start gap-2 cursor-pointer group"
               >
-                <button
-                  onClick={() => toggleChange(change.id)}
-                  className="mt-0.5 flex-shrink-0"
-                >
+                <div className="mt-0.5 flex-shrink-0">
                   {checkedChanges.has(change.id) ? (
                     <CheckCircle2 size={14} className="text-pit-accent" />
                   ) : (
                     <Circle size={14} className="text-gray-600 group-hover:text-gray-400" />
                   )}
-                </button>
-                <span className="text-xs text-gray-300 leading-tight">
+                </div>
+                <span className={`text-xs leading-tight transition-colors ${
+                  checkedChanges.has(change.id) ? 'text-pit-accent' : 'text-gray-300 group-hover:text-gray-100'
+                }`}>
                   {change.action}
                 </span>
-              </label>
+              </div>
             ))}
           </div>
           <div className="flex gap-2 mt-2">
