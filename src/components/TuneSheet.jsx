@@ -159,7 +159,15 @@ function TuneSheet({ vehicleId }) {
     setTimeout(() => setStatus(''), 2000);
   };
 
+  const [confirmReset, setConfirmReset] = useState(false);
+
   const handleReset = () => {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      setTimeout(() => setConfirmReset(false), 4000);
+      return;
+    }
+    setConfirmReset(false);
     setTune(getEmptyTune());
     setDiscipline('');
     setCarName('');
@@ -178,11 +186,14 @@ function TuneSheet({ vehicleId }) {
         <div className="ml-auto flex gap-1.5">
           <button
             onClick={handleReset}
-            className="p-1 rounded text-gray-500 hover:text-pit-warn transition-colors"
-            title="Reset all values"
+            className={`p-1 rounded transition-colors ${confirmReset ? 'text-pit-warn bg-pit-warn/10 ring-1 ring-pit-warn/40' : 'text-gray-500 hover:text-pit-warn'}`}
+            title={confirmReset ? 'Click again to confirm reset' : 'Reset all values'}
           >
             <RotateCcw size={12} />
           </button>
+          {confirmReset && (
+            <span className="text-[9px] text-pit-warn animate-pulse">Confirm?</span>
+          )}
           <button
             onClick={handleSave}
             disabled={saving}
