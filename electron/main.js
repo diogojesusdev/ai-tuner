@@ -3,8 +3,9 @@
  * Handles: transparent window, Gemini API, WebSocket client, IPC, auto-updates
  */
 
-const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
 const { GoogleGenAI } = require('@google/genai');
@@ -256,6 +257,13 @@ function handleBackendMessage(msg) {
       }
       currentCarMemory = msg.data;
       mainWindow.webContents.send('car-memory', msg.data);
+      break;
+
+    case 'ALL_CARS_LIST':
+      if (pendingAllCarsResolve) {
+        pendingAllCarsResolve(msg.data);
+        pendingAllCarsResolve = null;
+      }
       break;
   }
 }
@@ -648,6 +656,113 @@ ipcMain.handle('save-tune', async (event, { vehicleId, data }) => {
     updates: data,
   });
   return { success: true };
+});
+
+let pendingAllCarsResolve = null;
+
+ipcMain.handle('list-all-tunes', async () => {
+  if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
+    return [];
+  }
+  return new Promise((resolve) => {
+    pendingAllCarsResolve = resolve;
+    sendToBackend('LIST_ALL_CARS', {});
+    setTimeout(() => {
+      if (pendingAllCarsResolve === resolve) {
+        pendingAllCarsResolve = null;
+        resolve([]);
+      }
+    }, 2000);
+  });
+});
+
+ipcMain.handle('export-tune', async (event, { vehicleId, carName }) => {
+  if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
+    return { success: false, error: 'Backend not connected' };
+  }
+  // Get the full tune data first
+  const tuneData = await new Promise((resolve) => {
+    pendingTuneResolve = resolve;
+    sendToBackend('GET_CAR_MEMORY', { vehicle_id: vehicleId });
+    setTimeout(() => {
+      if (pendingTuneResolve === resolve) {
+        pendingTuneResolve = null;
+        resolve(null);
+      }
+    }, 2000);
+  });
+
+  if (!tuneData) return { success: false, error: 'Could not load tune data' };
+
+  const safeName = (carName || `vehicle_${vehicleId}`).replace(/[^a-zA-Z0-9_\- ]/g, '');
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Tune',
+    defaultPath: `${safeName}.json`,
+    filters: [{ name: 'JSON Tune File', extensions: ['json'] }],
+  });
+
+  if (result.canceled) return { success: false, canceled: true };
+
+  const exportData = {
+    _format: 'ai-tuner-v1',
+    vehicle_id: vehicleId,
+    car_name: tuneData.car_name || carName || '',
+    discipline: tuneData.discipline || '',
+    hp_tier: tuneData.hp_tier || '',
+    tune: tuneData.tune || {},
+    exported_at: new Date().toISOString(),
+  };
+
+  fs.writeFileSync(result.filePath, JSON.stringify(exportData, null, 2), 'utf-8');
+  return { success: true, path: result.filePath };
+});
+
+ipcMain.handle('import-tune', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import Tune',
+    filters: [{ name: 'JSON Tune File', extensions: ['json'] }],
+    properties: ['openFile'],
+  });
+
+  if (result.canceled || !result.filePaths.length) {
+    return { success: false, canceled: true };
+  }
+
+  try {
+    const raw = fs.readFileSync(result.filePaths[0], 'utf-8');
+    const data = JSON.parse(raw);
+
+    // Validate minimum structure
+    if (!data.tune || typeof data.tune !== 'object') {
+      return { success: false, error: 'Invalid tune file: missing "tune" object' };
+    }
+
+    // Generate a unique vehicle_id for imported tunes (prefix with 'imp_')
+    const importId = data.vehicle_id
+      ? `imp_${data.vehicle_id}`
+      : `imp_${Date.now()}`;
+
+    // Save to backend
+    sendToBackend('UPDATE_CAR_MEMORY', {
+      vehicle_id: importId,
+      updates: {
+        car_name: data.car_name || path.basename(result.filePaths[0], '.json'),
+        discipline: data.discipline || '',
+        hp_tier: data.hp_tier || '',
+        tune: data.tune,
+        imported: true,
+        imported_at: new Date().toISOString(),
+      },
+    });
+
+    return {
+      success: true,
+      vehicleId: importId,
+      carName: data.car_name || path.basename(result.filePaths[0], '.json'),
+    };
+  } catch (e) {
+    return { success: false, error: `Failed to parse file: ${e.message}` };
+  }
 });
 
 ipcMain.handle('get-input-devices', async () => {

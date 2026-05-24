@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld('pitwall', {
   // Tune sheet
   getTune: (vehicleId) => ipcRenderer.invoke('get-tune', { vehicleId }),
   saveTune: (vehicleId, data) => ipcRenderer.invoke('save-tune', { vehicleId, data }),
+  listAllTunes: () => ipcRenderer.invoke('list-all-tunes'),
+  exportTune: (vehicleId, carName) => ipcRenderer.invoke('export-tune', { vehicleId, carName }),
+  importTune: () => ipcRenderer.invoke('import-tune'),
   
   // Audio input devices
   getInputDevices: () => ipcRenderer.invoke('get-input-devices'),

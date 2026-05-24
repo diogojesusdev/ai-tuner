@@ -124,6 +124,14 @@ class AITunerBackend:
                 updates = msg.get("data", {}).get("updates", {})
                 self._save_car_memory(vehicle_id, updates)
 
+            elif msg_type == "LIST_ALL_CARS":
+                # Return summary of all saved cars
+                cars_summary = self._list_all_cars()
+                await websocket.send(json.dumps({
+                    "type": "ALL_CARS_LIST",
+                    "data": cars_summary
+                }))
+
             elif msg_type == "SET_PTT_KEY":
                 # User changed PTT key from UI
                 new_key = msg.get("data", {}).get("key", "caps_lock")
@@ -357,6 +365,24 @@ class AITunerBackend:
         data["cars"][vid] = car
         with open(CAR_MEMORY_PATH, "w") as f:
             json.dump(data, f, indent=2)
+
+    def _list_all_cars(self) -> list:
+        """Return a summary list of all saved cars."""
+        try:
+            with open(CAR_MEMORY_PATH, "r") as f:
+                data = json.load(f)
+            cars = []
+            for vid, car in data.get("cars", {}).items():
+                cars.append({
+                    "vehicle_id": vid,
+                    "car_name": car.get("car_name", ""),
+                    "discipline": car.get("discipline", ""),
+                    "hp_tier": car.get("hp_tier", ""),
+                    "has_tune": bool(car.get("tune")),
+                })
+            return cars
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
 
     def _update_ptt_key(self, new_key: str):
         """Update PTT key binding at runtime (no restart needed)."""
