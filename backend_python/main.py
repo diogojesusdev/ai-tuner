@@ -5,7 +5,6 @@ Manages UDP telemetry ingestion, WebSocket broadcasting, and voice I/O.
 
 import asyncio
 import json
-import socket
 import time
 import collections
 from pathlib import Path
@@ -155,29 +154,39 @@ class AITunerBackend:
             await asyncio.sleep(1.0)
 
     async def _telemetry_loop(self):
-        """Read UDP telemetry packets from the game."""
+        """Read UDP telemetry packets from the game using asyncio datagram protocol."""
         port = self.adapter.get_port()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("0.0.0.0", port))
-        sock.setblocking(False)
-        print(f"[Telemetry] Listening on UDP port {port}")
-
         loop = asyncio.get_event_loop()
 
-        while self._running:
-            try:
-                data = await loop.run_in_executor(
-                    None, lambda: sock.recv(1024)
-                )
-                if data:
-                    telemetry = self.adapter.parse_packet(data)
-                    self.latest_telemetry = telemetry
-                    self.telemetry_history.append(telemetry)
-            except BlockingIOError:
-                await asyncio.sleep(0.001)
-            except Exception as e:
-                await asyncio.sleep(0.01)
+        class TelemetryProtocol(asyncio.DatagramProtocol):
+            def __init__(self, backend):
+                self.backend = backend
+
+            def datagram_received(self, data, addr):
+                try:
+                    telemetry = self.backend.adapter.parse_packet(data)
+                    self.backend.latest_telemetry = telemetry
+                    self.backend.telemetry_history.append(telemetry)
+                except Exception:
+                    pass
+
+        try:
+            transport, protocol = await loop.create_datagram_endpoint(
+                lambda: TelemetryProtocol(self),
+                local_addr=("0.0.0.0", port),
+            )
+            print(f"[Telemetry] Listening on UDP port {port}")
+
+            # Keep alive until stopped
+            while self._running:
+                await asyncio.sleep(0.5)
+
+            transport.close()
+        except OSError as e:
+            print(f"[Telemetry] Failed to bind UDP port {port}: {e}")
+            print("[Telemetry] Make sure no other instance is running.")
+            while self._running:
+                await asyncio.sleep(1.0)
 
     async def _broadcast_loop(self):
         """Broadcast telemetry to WebSocket clients at configured rate."""

@@ -177,8 +177,10 @@ function connectWebSocket() {
 
   wsConnection.on('close', () => {
     console.log('[WS] Disconnected from backend. Reconnecting in 3s...');
+    telemetryReceived = false; // Reset so UI gets notified on reconnect
     if (mainWindow) {
       mainWindow.webContents.send('backend-status', { connected: false });
+      mainWindow.webContents.send('telemetry-status', { receiving: false });
     }
     setTimeout(connectWebSocket, 3000);
   });
