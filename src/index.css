@@ -22,7 +22,6 @@ body {
   overflow: hidden;
   user-select: none;
   -webkit-app-region: no-drag;
-  pointer-events: none;
 }
 
 /* Scrollbar styling */

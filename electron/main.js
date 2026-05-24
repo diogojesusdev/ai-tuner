@@ -48,11 +48,9 @@ function createWindow() {
     height: 1080,
     transparent: true,
     frame: false,
-    alwaysOnTop: true,
     hasShadow: false,
     skipTaskbar: true,
     resizable: false,
-    focusable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -60,18 +58,11 @@ function createWindow() {
     },
   });
 
-  // Use 'screen-saver' level to stay above fullscreen games
-  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  // 'floating' level: above normal windows but doesn't invade other desktops
+  mainWindow.setAlwaysOnTop(true, 'floating');
 
-  // Start fully click-through
+  // Start in click-through mode; renderer toggles this on hover
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
-
-  // Periodically re-assert topmost (handles game reclaiming z-order)
-  setInterval(() => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setAlwaysOnTop(true, 'screen-saver');
-    }
-  }, 2000);
 
   if (isDev) {
     // Try Vite dev server first, fall back to built dist/
@@ -280,14 +271,9 @@ ipcMain.handle('set-ptt-key', async (event, { key }) => {
 ipcMain.handle('set-click-through', async (event, { ignore }) => {
   if (mainWindow) {
     if (ignore) {
-      // Back to overlay mode: click-through, not focusable
       mainWindow.setIgnoreMouseEvents(true, { forward: true });
-      mainWindow.setFocusable(false);
     } else {
-      // Interactive mode: capture clicks, become focusable
       mainWindow.setIgnoreMouseEvents(false);
-      mainWindow.setFocusable(true);
-      mainWindow.focus();
     }
   }
 });
@@ -308,10 +294,15 @@ app.whenReady().then(() => {
     overlayVisible = !overlayVisible;
     if (overlayVisible) {
       mainWindow.show();
-      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+      mainWindow.setAlwaysOnTop(true, 'floating');
     } else {
       mainWindow.hide();
     }
+  });
+
+  // Global shortcut to quit the app (Ctrl+Shift+Q)
+  globalShortcut.register('CommandOrControl+Shift+Q', () => {
+    app.quit();
   });
 });
 
