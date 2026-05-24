@@ -3,10 +3,11 @@ import { MessageCircle, CheckCircle2, Circle, Send, Mic } from 'lucide-react';
 
 /**
  * ChatWindow - Conversational UI with the AI race engineer.
- * Shows conversation history and pending setup change checkboxes.
+ * Shows conversation history, pending setup change checkboxes,
+ * and a pulsing mic indicator when the user is speaking.
  */
 
-function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage }) {
+function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage, isListening }) {
   const [inputText, setInputText] = useState('');
   const [checkedChanges, setCheckedChanges] = useState(new Set());
   const messagesEndRef = useRef(null);
@@ -53,10 +54,14 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onSendMessage 
       <div className="px-4 py-2 border-b border-gray-800/50 flex items-center gap-2">
         <MessageCircle size={16} className="text-pit-accent" />
         <span className="text-sm font-medium text-gray-200">Race Engineer</span>
-        <div className="ml-auto flex items-center gap-1">
-          <Mic size={12} className="text-gray-500" />
-          <span className="text-[10px] text-gray-500">PTT: CapsLock</span>
-        </div>
+        {/* Listening indicator */}
+        {isListening && (
+          <div className="ml-auto flex items-center gap-1.5 animate-pulse">
+            <div className="listening-ripple" />
+            <Mic size={14} className="text-red-400" />
+            <span className="text-[10px] text-red-400 font-medium">Listening...</span>
+          </div>
+        )}
       </div>
 
       {/* Messages */}

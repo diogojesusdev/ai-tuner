@@ -9,14 +9,13 @@ contextBridge.exposeInMainWorld('pitwall', {
   // Settings
   setApiKey: (key, model) => ipcRenderer.invoke('set-api-key', { key, model }),
   setPttKey: (key) => ipcRenderer.invoke('set-ptt-key', { key }),
+  setShortcuts: (newShortcuts) => ipcRenderer.invoke('set-shortcuts', { newShortcuts }),
+  getShortcuts: () => ipcRenderer.invoke('get-shortcuts'),
   
   // Chat
   sendMessage: (text) => ipcRenderer.invoke('send-message', { text }),
   confirmChanges: (confirmedIds) => ipcRenderer.invoke('confirm-changes', { confirmedIds }),
   getPendingChanges: () => ipcRenderer.invoke('get-pending-changes'),
-  
-  // Window control
-  setClickThrough: (ignore) => ipcRenderer.invoke('set-click-through', { ignore }),
   
   // Event listeners from main process
   onTelemetryUpdate: (callback) => {
@@ -34,8 +33,8 @@ contextBridge.exposeInMainWorld('pitwall', {
   onCarMemory: (callback) => {
     ipcRenderer.on('car-memory', (event, data) => callback(data));
   },
-  onInteractMode: (callback) => {
-    ipcRenderer.on('interact-mode', (event, data) => callback(data));
+  onListeningState: (callback) => {
+    ipcRenderer.on('listening-state', (event, data) => callback(data));
   },
   onTelemetryStatus: (callback) => {
     ipcRenderer.on('telemetry-status', (event, data) => callback(data));

@@ -11,7 +11,6 @@ const { GoogleGenAI } = require('@google/genai');
 let mainWindow = null;
 let wsConnection = null;
 let overlayVisible = true;
-let interactMode = false;  // true = can click UI, false = click-through
 let genaiClient = null;
 let chatSession = null;
 let telemetryReceived = false;
@@ -21,6 +20,12 @@ let apiKey = '';
 let modelName = 'gemini-2.5-flash';
 let pendingChanges = [];
 let currentVehicleId = null;
+
+// Configurable shortcuts (defaults)
+let shortcuts = {
+  toggleOverlay: 'F10',
+  quit: 'CommandOrControl+Shift+Q',
+};
 
 const SYSTEM_PROMPT = `You are an elite, highly knowledgeable pit-lane race car engineer. Your goal is to optimize car setups based on live telemetry data and subjective driver feedback. You assist with all driving activities (drifting, grip racing, offroad, drag).
 
@@ -136,6 +141,10 @@ function handleBackendMessage(msg) {
       mainWindow.webContents.send('voice-transcript', msg.data);
       // Automatically send to Gemini
       processUserMessage(msg.data.text);
+      break;
+
+    case 'LISTENING_STATE':
+      mainWindow.webContents.send('listening-state', msg.data);
       break;
 
     case 'TELEMETRY_SUMMARY':
@@ -273,39 +282,59 @@ ipcMain.handle('set-ptt-key', async (event, { key }) => {
   return { success: true };
 });
 
-ipcMain.handle('set-click-through', async (event, { ignore }) => {
-  // Keep for API compat but interaction is now hotkey-driven
-  if (mainWindow) {
-    mainWindow.setIgnoreMouseEvents(ignore);
-  }
+ipcMain.handle('set-shortcuts', async (event, { newShortcuts }) => {
+  // Unregister old shortcuts
+  globalShortcut.unregisterAll();
+  // Update state
+  shortcuts = { ...shortcuts, ...newShortcuts };
+  // Re-register with new bindings
+  registerShortcuts();
+  return { success: true };
+});
+
+ipcMain.handle('get-shortcuts', async () => {
+  return { shortcuts };
 });
 
 ipcMain.handle('get-pending-changes', async () => {
   return { changes: pendingChanges };
 });
 
+// ============ Shortcut Registration ============
+
+function registerShortcuts() {
+  // Toggle overlay visibility
+  try {
+    globalShortcut.register(shortcuts.toggleOverlay, () => {
+      if (!mainWindow) return;
+      overlayVisible = !overlayVisible;
+      if (overlayVisible) {
+        mainWindow.show();
+        mainWindow.setAlwaysOnTop(true, 'floating');
+      } else {
+        mainWindow.minimize();
+      }
+    });
+  } catch (e) {
+    console.error(`[Shortcut] Failed to register toggle: ${shortcuts.toggleOverlay}`, e.message);
+  }
+
+  // Quit
+  try {
+    globalShortcut.register(shortcuts.quit, () => {
+      app.quit();
+    });
+  } catch (e) {
+    console.error(`[Shortcut] Failed to register quit: ${shortcuts.quit}`, e.message);
+  }
+}
+
 // ============ App Lifecycle ============
 
 app.whenReady().then(() => {
   createWindow();
   connectWebSocket();
-
-  // F10: Toggle overlay visibility
-  globalShortcut.register('F10', () => {
-    if (!mainWindow) return;
-    overlayVisible = !overlayVisible;
-    if (overlayVisible) {
-      mainWindow.show();
-      mainWindow.setAlwaysOnTop(true, 'floating');
-    } else {
-      mainWindow.minimize();
-    }
-  });
-
-  // Ctrl+Shift+Q: Quit
-  globalShortcut.register('CommandOrControl+Shift+Q', () => {
-    app.quit();
-  });
+  registerShortcuts();
 });
 
 app.on('will-quit', () => {

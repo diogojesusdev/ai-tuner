@@ -209,10 +209,18 @@ class PitWallBackend:
             if key == ptt_key and not self._ptt_held:
                 self._ptt_held = True
                 self.stt.start_recording()
+                # Notify UI that recording started
+                asyncio.run_coroutine_threadsafe(
+                    self._broadcast_listening_state(True), loop
+                )
 
         def on_release(key):
             if key == ptt_key and self._ptt_held:
                 self._ptt_held = False
+                # Notify UI that recording stopped
+                asyncio.run_coroutine_threadsafe(
+                    self._broadcast_listening_state(False), loop
+                )
                 # Schedule transcription in the async loop
                 asyncio.run_coroutine_threadsafe(
                     self._process_voice(), loop
@@ -244,6 +252,18 @@ class PitWallBackend:
                     await client.send(message)
                 except websockets.exceptions.ConnectionClosed:
                     pass
+
+    async def _broadcast_listening_state(self, is_listening: bool):
+        """Notify connected clients about PTT listening state."""
+        message = json.dumps({
+            "type": "LISTENING_STATE",
+            "data": {"listening": is_listening}
+        })
+        for client in self.ws_clients.copy():
+            try:
+                await client.send(message)
+            except websockets.exceptions.ConnectionClosed:
+                pass
 
     def _get_telemetry_summary(self) -> dict:
         """Generate a 30-second telemetry summary for LLM context."""

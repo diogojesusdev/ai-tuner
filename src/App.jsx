@@ -10,6 +10,7 @@ function App() {
   const [pendingChanges, setPendingChanges] = useState([]);
   const [backendConnected, setBackendConnected] = useState(false);
   const [telemetryActive, setTelemetryActive] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   // Auto-open settings if no API key is configured
@@ -56,6 +57,10 @@ function App() {
       setTelemetryActive(data.receiving);
     });
 
+    window.pitwall.onListeningState((data) => {
+      setIsListening(data.listening);
+    });
+
     return () => {
       if (window.pitwall) {
         window.pitwall.removeAllListeners('telemetry-update');
@@ -63,6 +68,7 @@ function App() {
         window.pitwall.removeAllListeners('ai-response');
         window.pitwall.removeAllListeners('backend-status');
         window.pitwall.removeAllListeners('telemetry-status');
+        window.pitwall.removeAllListeners('listening-state');
       }
     };
   }, []);
@@ -89,47 +95,40 @@ function App() {
            style={{ WebkitAppRegion: 'drag' }}>
         <GripVertical size={12} className="text-gray-600" />
         <span className="text-[10px] font-medium text-gray-400 flex-1">PITWALL</span>
-        {/* Status dots */}
+        {/* Backend status dot */}
         <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' }}>
           <div className={`w-2 h-2 rounded-full ${backendConnected ? 'bg-pit-accent' : 'bg-pit-danger'}`}
                title={backendConnected ? 'Backend connected' : 'Backend offline'} />
-          <div className={`w-2 h-2 rounded-full ${telemetryActive ? 'bg-pit-accent' : 'bg-pit-warn'}`}
-               title={telemetryActive ? 'Telemetry live' : 'No telemetry data'} />
         </div>
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="hover:text-pit-accent text-gray-500 transition-colors"
+          className={`hover:text-pit-accent transition-colors ${showSettings ? 'text-pit-accent' : 'text-gray-500'}`}
           style={{ WebkitAppRegion: 'no-drag' }}
         >
           <Settings size={14} />
         </button>
       </div>
 
-      {/* Settings Panel (slides in) */}
-      {showSettings && (
+      {/* Content area: either Settings OR Telemetry+Chat */}
+      {showSettings ? (
         <SettingsPanel onClose={() => setShowSettings(false)} />
-      )}
+      ) : (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Telemetry HUD (compact speed/RPM bar) */}
+          <TelemetryHUD telemetry={telemetry} telemetryActive={telemetryActive} />
 
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Telemetry HUD */}
-        <TelemetryHUD telemetry={telemetry} />
-
-        {/* Chat Window (takes remaining space) */}
-        <div className="flex-1 min-h-0">
-          <ChatWindow
-            messages={messages}
-            pendingChanges={pendingChanges}
-            onConfirmChanges={handleConfirmChanges}
-            onSendMessage={handleSendMessage}
-          />
+          {/* Chat Window (takes remaining space) */}
+          <div className="flex-1 min-h-0">
+            <ChatWindow
+              messages={messages}
+              pendingChanges={pendingChanges}
+              onConfirmChanges={handleConfirmChanges}
+              onSendMessage={handleSendMessage}
+              isListening={isListening}
+            />
+          </div>
         </div>
-      </div>
-
-      {/* Footer with shortcuts hint */}
-      <div className="px-3 py-1 text-center text-[9px] text-gray-600 glass-panel rounded-t-none border-t-0">
-        F10: Hide/Show • Ctrl+Shift+Q: Quit • CapsLock: Push-to-Talk
-      </div>
+      )}
     </div>
   );
 }
