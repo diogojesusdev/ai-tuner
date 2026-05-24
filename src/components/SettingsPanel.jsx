@@ -302,9 +302,6 @@ function SettingsPanel({ onClose }) {
             <span className="text-pit-info">aistudio.google.com</span>.
             Keys are stored locally and never sent to third parties.
           </p>
-          <p className="text-[10px] text-gray-600 leading-relaxed mt-1">
-            PTT key requires a backend restart to take effect.
-          </p>
         </div>
 
         {/* Version & Updates */}

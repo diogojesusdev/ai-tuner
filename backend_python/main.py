@@ -215,10 +215,8 @@ class AITunerBackend:
                 await asyncio.sleep(1.0)
             return
 
-        ptt_key_name = CONFIG["hotkeys"]["push_to_talk"]
-        
         # Map config key names to pynput keys
-        key_map = {
+        self._key_map = {
             "caps_lock": keyboard.Key.caps_lock,
             "scroll_lock": keyboard.Key.scroll_lock,
             "f9": keyboard.Key.f9,
@@ -226,26 +224,25 @@ class AITunerBackend:
             "f11": keyboard.Key.f11,
             "f12": keyboard.Key.f12,
         }
-        ptt_key = key_map.get(ptt_key_name, keyboard.Key.caps_lock)
+
+        ptt_key_name = CONFIG["hotkeys"]["push_to_talk"]
+        self._active_ptt_key = self._key_map.get(ptt_key_name, keyboard.Key.caps_lock)
         loop = asyncio.get_event_loop()
 
         def on_press(key):
-            if key == ptt_key and not self._ptt_held:
+            if key == self._active_ptt_key and not self._ptt_held:
                 self._ptt_held = True
                 self.stt.start_recording()
-                # Notify UI that recording started
                 asyncio.run_coroutine_threadsafe(
                     self._broadcast_listening_state(True), loop
                 )
 
         def on_release(key):
-            if key == ptt_key and self._ptt_held:
+            if key == self._active_ptt_key and self._ptt_held:
                 self._ptt_held = False
-                # Notify UI that recording stopped
                 asyncio.run_coroutine_threadsafe(
                     self._broadcast_listening_state(False), loop
                 )
-                # Schedule transcription in the async loop
                 asyncio.run_coroutine_threadsafe(
                     self._process_voice(), loop
                 )
@@ -362,8 +359,16 @@ class AITunerBackend:
             json.dump(data, f, indent=2)
 
     def _update_ptt_key(self, new_key: str):
-        """Update PTT key binding at runtime and persist to config."""
+        """Update PTT key binding at runtime (no restart needed)."""
         self._ptt_key_name = new_key
+        # Hot-swap the active key reference
+        if hasattr(self, '_key_map') and hasattr(self, '_active_ptt_key'):
+            new_ptt = self._key_map.get(new_key)
+            if new_ptt:
+                self._active_ptt_key = new_ptt
+                print(f"[Hotkey] PTT key hot-swapped to: {new_key}")
+            else:
+                print(f"[Hotkey] Unknown key '{new_key}', keeping current binding")
         # Persist to config.json
         try:
             with open(CONFIG_PATH, "r") as f:
@@ -372,7 +377,6 @@ class AITunerBackend:
             cfg["voice"]["push_to_talk_key"] = new_key
             with open(CONFIG_PATH, "w") as f:
                 json.dump(cfg, f, indent=2)
-            print(f"[Hotkey] PTT key updated to: {new_key} (restart backend to apply)")
         except Exception as e:
             print(f"[Hotkey] Failed to save PTT key: {e}")
 
