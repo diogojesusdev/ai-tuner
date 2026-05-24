@@ -548,6 +548,11 @@ ipcMain.handle('start-collecting', async () => {
   return { success: true };
 });
 
+ipcMain.handle('stop-collecting', async () => {
+  setAgentState(AGENT_STATES.READY);
+  return { success: true };
+});
+
 ipcMain.handle('confirm-changes', async (event, { confirmedIds }) => {
   // Update car memory with confirmed changes
   const confirmed = pendingChanges.filter(c => confirmedIds.includes(c.id));

@@ -3,7 +3,7 @@ import TelemetryHUD from './components/TelemetryHUD';
 import ChatWindow from './components/ChatWindow';
 import TuneSheet from './components/TuneSheet';
 import SettingsPanel from './components/SettingsPanel';
-import { Settings, GripVertical, MessageCircle, Wrench, X } from 'lucide-react';
+import { Settings, GripVertical, MessageCircle, Wrench, X, Square } from 'lucide-react';
 
 const STATE_LABELS = {
   IDLE: { text: 'Idle', color: 'text-gray-500' },
@@ -14,8 +14,27 @@ const STATE_LABELS = {
   UPDATING_TUNE: { text: 'Updating', color: 'text-pit-info' },
 };
 
-function AgentStatePill({ state }) {
+function AgentStatePill({ state, onStopCollecting, maxMinutes }) {
   const info = STATE_LABELS[state] || STATE_LABELS.IDLE;
+
+  if (state === 'COLLECTING_DATA') {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className={`text-[9px] px-1.5 py-0.5 rounded border border-yellow-700/50 ${info.color}`}>
+          {info.text} <span className="text-gray-500">max {maxMinutes}m</span>
+        </span>
+        <button
+          onClick={onStopCollecting}
+          className="flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded border border-pit-accent/40 bg-pit-accent/10 text-pit-accent hover:bg-pit-accent/20 transition-colors"
+          title="Stop collecting and analyze now"
+        >
+          <Square size={8} className="fill-current" />
+          Done
+        </button>
+      </div>
+    );
+  }
+
   return (
     <span className={`text-[9px] px-1.5 py-0.5 rounded border border-gray-700/50 ${info.color}`}>
       {info.text}
@@ -188,6 +207,11 @@ function App() {
     await window.pitwall.sendMessage(value);
   }, []);
 
+  const handleStopCollecting = useCallback(async () => {
+    if (!window.pitwall) return;
+    await window.pitwall.stopCollecting();
+  }, []);
+
   return (
     <div className="w-full h-full flex flex-col glass-panel">
       {/* Title Bar (draggable to move window) */}
@@ -246,7 +270,11 @@ function App() {
             </button>
             {/* Agent state pill */}
             <div className="ml-auto">
-              <AgentStatePill state={agentState} />
+              <AgentStatePill
+                state={agentState}
+                onStopCollecting={handleStopCollecting}
+                maxMinutes={parseInt(localStorage.getItem('pitwall_telemetry_window') || '5', 10)}
+              />
             </div>
           </div>
 
