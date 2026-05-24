@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TelemetryHUD from './components/TelemetryHUD';
 import ChatWindow from './components/ChatWindow';
 import TuneSheet from './components/TuneSheet';
@@ -66,6 +66,14 @@ function App() {
   const [activeSessionId, setActiveSessionId] = useState(() => {
     return localStorage.getItem('pitwall_active_session') || null;
   });
+
+  // Refs to avoid stale closures in telemetry listener
+  const vehicleIdRef = useRef(vehicleId);
+  const sessionsRef = useRef(sessions);
+  const activeSessionIdRef = useRef(activeSessionId);
+  useEffect(() => { vehicleIdRef.current = vehicleId; }, [vehicleId]);
+  useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
+  useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
 
   // Persist sessions list to localStorage
   useEffect(() => {
@@ -184,12 +192,12 @@ function App() {
     window.pitwall.onTelemetryUpdate((data) => {
       setTelemetry(data);
       if (!telemetryActive) setTelemetryActive(true);
-      if (data.vehicle_id && data.vehicle_id !== vehicleId) {
+      if (data.vehicle_id && data.vehicle_id !== vehicleIdRef.current) {
         setVehicleId(data.vehicle_id);
         // Check if there's an existing session for this vehicle
-        const existing = sessions.find((s) => s.vehicleId === data.vehicle_id);
+        const existing = sessionsRef.current.find((s) => s.vehicleId === data.vehicle_id);
         if (existing) {
-          if (existing.id !== activeSessionId) {
+          if (existing.id !== activeSessionIdRef.current) {
             switchToSession(existing.id);
           }
         } else {
