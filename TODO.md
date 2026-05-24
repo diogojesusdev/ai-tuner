@@ -1,6 +1,6 @@
 ## FEATURES
-- Add a global input/output LLM tokens used and keep a per-ai-engineer-chat tokens count
-    I think the gemini HTTP response contains these metrics, so you can use them for accurate measuring
+- Removing an AI Engineer session shouldn't remove tunes for the cars mentioned there!
+- Rename the "Sessions tab" to "AI Engineer Sessions"
 - Improve github page SEO
 - Take screenshots and put on the site
 

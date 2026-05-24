@@ -343,6 +343,88 @@
     @media (max-width: 768px) {
       .feature-grid { grid-template-columns: 1fr; }
       .tech-grid { grid-template-columns: repeat(2, 1fr); }
+      .screenshot-grid { grid-template-columns: 1fr !important; }
+    }
+
+    /* Hero image */
+    .hero-image {
+      max-width: 1000px;
+      width: 100%;
+      margin: 3rem auto 0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    }
+
+    .hero-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Screenshot gallery */
+    .screenshots {
+      padding: 6rem 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .screenshots h2 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .screenshots h2 span { color: var(--red); }
+
+    .screenshots-subtitle {
+      text-align: center;
+      color: var(--gray);
+      margin-bottom: 3rem;
+      font-size: 1rem;
+    }
+
+    .screenshot-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+
+    .screenshot-card {
+      background: var(--dark-panel);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .screenshot-card:hover {
+      border-color: rgba(255, 45, 85, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .screenshot-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .screenshot-card .caption {
+      padding: 1rem 1.25rem;
+    }
+
+    .screenshot-card .caption h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .screenshot-card .caption p {
+      color: var(--gray);
+      font-size: 0.8rem;
+      line-height: 1.5;
     }
   </style>
 </head>
@@ -363,6 +445,9 @@
         <a href="https://github.com/diogojesusdev/ai-tuner" class="btn btn-secondary">
           View on GitHub
         </a>
+      </div>
+      <div class="hero-image">
+        <img src="img/hero-overlay.png" alt="AI Tuner overlay running alongside Forza Horizon 6 with a Toyota Supra" />
       </div>
     </div>
   </section>
@@ -401,6 +486,42 @@
         <div class="feature-icon blue">🪟</div>
         <h3>Stays Out of Your Way</h3>
         <p>A tiny transparent overlay that sits on top of your game. Shows speed, RPM, and your engineer's messages. Toggle it with a hotkey — it never interrupts your driving.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Screenshots -->
+  <section class="screenshots">
+    <h2>See It in <span>Action</span></h2>
+    <p class="screenshots-subtitle">Real screenshots from a live tuning session with a Toyota Supra MK5 drift build.</p>
+    <div class="screenshot-grid">
+      <div class="screenshot-card">
+        <img src="img/chat-suggestions.png" alt="AI Engineer suggesting tire pressure and differential changes" />
+        <div class="caption">
+          <h4>Ask for a tune, get precise suggestions</h4>
+          <p>Tell it what you want and it responds with specific relative adjustments. Confirm them one by one or all at once.</p>
+        </div>
+      </div>
+      <div class="screenshot-card">
+        <img src="img/chat-feedback.png" alt="Driver reporting spinning out, engineer analyzing telemetry" />
+        <div class="caption">
+          <h4>Report issues, get data-backed fixes</h4>
+          <p>"I'm spinning out" — the engineer sees your slip ratios and tire temps, then suggests targeted changes to stabilize the rear.</p>
+        </div>
+      </div>
+      <div class="screenshot-card">
+        <img src="img/tune-sheet.png" alt="Tune sheet showing tire pressures, camber, springs, damping" />
+        <div class="caption">
+          <h4>Per-car tune sheet</h4>
+          <p>Every value the AI sets gets recorded. Export as JSON, import community tunes, or manually tweak — it's all persistent.</p>
+        </div>
+      </div>
+      <div class="screenshot-card">
+        <img src="img/settings.png" alt="Settings panel with API key, microphone, speech model, token usage" />
+        <div class="caption">
+          <h4>Fully configurable</h4>
+          <p>Choose your mic, STT model size, hotkeys, and AI model. Token usage tracked per session and all-time. Everything stays local.</p>
+        </div>
       </div>
     </div>
   </section>

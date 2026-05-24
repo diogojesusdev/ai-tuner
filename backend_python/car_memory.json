@@ -4,7 +4,9 @@
       "discipline": "drifting",
       "past_modifications": [
         "Increase rear tire pressure by +0.3 Bar",
-        "Decrease front tire pressure by -0.1 Bar"
+        "Decrease front tire pressure by -0.1 Bar",
+        "Decrease front tire pressure by -0.2 Bar (2.2 \u2192 2.0)",
+        "Increase rear tire pressure by +0.3 Bar (2.3 \u2192 2.6)"
       ],
       "tune": {
         "tire_pressure_fl": "2.2",
