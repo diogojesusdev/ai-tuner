@@ -38,7 +38,6 @@ function SettingsPanel({ onClose }) {
   const [model, setModel] = useState('gemini-3.1-flash-lite');
   const [pttKey, setPttKey] = useState('caps_lock');
   const [toggleOverlay, setToggleOverlay] = useState('F10');
-  const [quitShortcut, setQuitShortcut] = useState('CommandOrControl+Shift+Q');
   const [telemetryWindow, setTelemetryWindow] = useState(5);
   const [status, setStatus] = useState('');
   const [saving, setSaving] = useState(false);
@@ -49,13 +48,11 @@ function SettingsPanel({ onClose }) {
     const savedModel = localStorage.getItem('pitwall_model') || 'gemini-3.1-flash-lite';
     const savedPtt = localStorage.getItem('pitwall_ptt_key') || 'caps_lock';
     const savedToggle = localStorage.getItem('pitwall_shortcut_toggle') || 'F10';
-    const savedQuit = localStorage.getItem('pitwall_shortcut_quit') || 'CommandOrControl+Shift+Q';
     const savedWindow = localStorage.getItem('pitwall_telemetry_window') || '5';
     setApiKey(savedKey);
     setModel(savedModel);
     setPttKey(savedPtt);
     setToggleOverlay(savedToggle);
-    setQuitShortcut(savedQuit);
     setTelemetryWindow(parseInt(savedWindow, 10));
   }, []);
 
@@ -73,7 +70,6 @@ function SettingsPanel({ onClose }) {
     localStorage.setItem('pitwall_model', model);
     localStorage.setItem('pitwall_ptt_key', pttKey);
     localStorage.setItem('pitwall_shortcut_toggle', toggleOverlay);
-    localStorage.setItem('pitwall_shortcut_quit', quitShortcut);
     localStorage.setItem('pitwall_telemetry_window', String(telemetryWindow));
 
     // Send to Electron main process
@@ -82,7 +78,6 @@ function SettingsPanel({ onClose }) {
       await window.pitwall.setPttKey(pttKey);
       await window.pitwall.setShortcuts({
         toggleOverlay,
-        quit: quitShortcut,
       });
       await window.pitwall.setTelemetryWindow(telemetryWindow);
       if (result.success) {
@@ -207,18 +202,6 @@ function SettingsPanel({ onClose }) {
               <select
                 value={toggleOverlay}
                 onChange={(e) => setToggleOverlay(e.target.value)}
-                className="w-full bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-pit-accent/50"
-              >
-                {SHORTCUT_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{formatShortcutLabel(s)}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] text-gray-400 mb-1 block">Quit Application</label>
-              <select
-                value={quitShortcut}
-                onChange={(e) => setQuitShortcut(e.target.value)}
                 className="w-full bg-gray-800/50 border border-gray-700/30 rounded-md px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-pit-accent/50"
               >
                 {SHORTCUT_OPTIONS.map((s) => (

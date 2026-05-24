@@ -3,7 +3,7 @@ import TelemetryHUD from './components/TelemetryHUD';
 import ChatWindow from './components/ChatWindow';
 import TuneSheet from './components/TuneSheet';
 import SettingsPanel from './components/SettingsPanel';
-import { Settings, GripVertical, MessageCircle, Wrench } from 'lucide-react';
+import { Settings, GripVertical, MessageCircle, Wrench, X } from 'lucide-react';
 
 const STATE_LABELS = {
   IDLE: { text: 'Idle', color: 'text-gray-500' },
@@ -139,6 +139,14 @@ function App() {
           style={{ WebkitAppRegion: 'no-drag' }}
         >
           <Settings size={14} />
+        </button>
+        <button
+          onClick={() => window.close()}
+          className="text-gray-500 hover:text-pit-danger transition-colors"
+          style={{ WebkitAppRegion: 'no-drag' }}
+          title="Close PitWall"
+        >
+          <X size={14} />
         </button>
       </div>
 

@@ -42,7 +42,6 @@ let currentCarMemory = null;
 // Configurable shortcuts (defaults)
 let shortcuts = {
   toggleOverlay: 'F10',
-  quit: 'CommandOrControl+Shift+Q',
 };
 
 const SYSTEM_PROMPT = `You are an elite pit-lane race car engineer operating in a structured workflow. You help optimize car setups using live telemetry and driver feedback. Disciplines: racing, drifting, rally, drag.
@@ -576,14 +575,7 @@ function registerShortcuts() {
     console.error(`[Shortcut] Failed to register toggle: ${shortcuts.toggleOverlay}`, e.message);
   }
 
-  // Quit
-  try {
-    globalShortcut.register(shortcuts.quit, () => {
-      app.quit();
-    });
-  } catch (e) {
-    console.error(`[Shortcut] Failed to register quit: ${shortcuts.quit}`, e.message);
-  }
+  // Quit shortcut removed — close via UI X button
 }
 
 // ============ Python Backend Management ============
