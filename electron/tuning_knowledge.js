@@ -254,6 +254,51 @@ Softening an ARB on an axle **INCREASES grip on that axle** (more independent wh
 
 **COMMON MISTAKE: Do NOT soften rear ARB when the driver wants LESS rear grip (e.g., can't initiate drift). Softening rear ARB adds grip to the rear — the opposite of what's needed.**
 
+### DIFFERENTIAL CHEAT SHEET
+Accel lock = how much both driven wheels are forced to spin together UNDER POWER.
+Decel lock = how much both driven wheels are forced to spin together ON LIFT-OFF / engine braking.
+
+| Goal | Accel Lock | Decel Lock |
+|------|-----------|------------|
+| More traction on exit (grip racing) | **INCREASE** (wheels share load) | — |
+| Less power oversteer on exit | **DECREASE** (inside wheel can slip freely) | — |
+| Smoother transitions (drift) | — | **DECREASE** (rear freewheels on lift-off) |
+| Snappier rotation on lift-off | — | **INCREASE** (engine braking locks rear) |
+| Both rears spin evenly (drift smoke) | **INCREASE** to 80-100% | — |
+| Easier throttle modulation (drift) | **DECREASE** slightly (more forgiveness) | — |
+
+**KEY INSIGHT:** High accel lock is great for drifting (consistent smoke) but causes push/understeer in grip racing (inside wheel pushes car wide). Low decel lock is critical for smooth drift transitions.
+
+### TOE DIRECTION CHEAT SHEET
+Toe-OUT (negative) = wheels point AWAY from each other. Toe-IN (positive) = wheels point TOWARD each other.
+
+| Goal | Front Toe | Rear Toe |
+|------|-----------|----------|
+| Sharper turn-in response | **TOE-OUT** (−0.1° to −0.5°) | — |
+| More straight-line stability | **TOE-IN** (+0.1°) | **TOE-IN** (+0.1° to +0.3°) |
+| Reduce understeer on entry | **TOE-OUT** (−0.1° to −0.2°) | — |
+| Stabilize rear between transitions (drift) | — | **TOE-IN** (+0.1° to +0.3°) |
+| Reduce rear snap / overrotation | — | **TOE-IN** (+0.1° to +0.2°) |
+| More rear rotation (looser rear) | — | **TOE-OUT** (−0.1°) — use cautiously |
+
+**TRADEOFF:** More toe = more tire scrub = more heat + drag. Keep changes small (0.1° steps). Toe is a fine-tuning tool, not a primary balance tool.
+
+### DAMPING CHEAT SHEET (BUMP vs REBOUND)
+**Bump** controls how fast the suspension COMPRESSES (hitting a bump, weight transfer arriving).
+**Rebound** controls how fast the suspension EXTENDS BACK (weight leaving, recovering from compression).
+
+| Goal | Bump | Rebound |
+|------|------|---------|
+| Absorb bumps/curbs better | **DECREASE** bump (let it compress freely) | — |
+| Reduce body dive under braking | **INCREASE** front bump | — |
+| Reduce squat under acceleration | **INCREASE** rear bump | — |
+| Smoother weight transfer (drift) | **DECREASE** both (faster weight shift) | — |
+| Stop bouncing / oscillation | — | **INCREASE** rebound (slows extension) |
+| More responsive direction changes | — | **DECREASE** rebound (quicker weight return) |
+| Stable platform at high speed | **INCREASE** both slightly | **INCREASE** both slightly |
+
+**RULE OF THUMB:** Rebound should be ~60-75% of bump value. If bump is 8, rebound should be 5-6. Always change bump and rebound together to maintain this ratio.
+
 ### ENGINEER BEHAVIOR RULES
 
 1. **Be iterative.** One small change → test → feedback → next change. Never dump 8 changes at once.
