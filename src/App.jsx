@@ -3,8 +3,9 @@ import TelemetryHUD from './components/TelemetryHUD';
 import ChatWindow from './components/ChatWindow';
 import TuneSheet from './components/TuneSheet';
 import PartsSheet from './components/PartsSheet';
+import Garage from './components/Garage';
 import SettingsPanel from './components/SettingsPanel';
-import { Settings, GripVertical, MessageCircle, Wrench, X, Square, History, Plus, Trash2, Cog } from 'lucide-react';
+import { Settings, GripVertical, MessageCircle, Wrench, X, Square, History, Plus, Trash2, Cog, Car } from 'lucide-react';
 
 const STATE_LABELS = {
   IDLE: { text: 'Idle', color: 'text-gray-500' },
@@ -477,7 +478,7 @@ function App() {
             <button
               onClick={() => setActiveTab('tune')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-b-2 transition-colors ${
-                activeTab === 'tune' || activeTab === 'parts'
+                activeTab === 'tune' || activeTab === 'parts' || activeTab === 'garage'
                   ? 'border-pit-accent text-pit-accent'
                   : 'border-transparent text-gray-500 hover:text-gray-300'
               }`}
@@ -525,7 +526,7 @@ function App() {
                 </div>
               </div>
             )}
-            {(activeTab === 'tune' || activeTab === 'parts') && (
+            {(activeTab === 'tune' || activeTab === 'parts' || activeTab === 'garage') && (
               <div className="h-full flex flex-col">
                 {/* Sub-tab toggle */}
                 <div className="px-4 py-1.5 border-b border-gray-800/50 flex gap-2">
@@ -549,9 +550,26 @@ function App() {
                   >
                     Installed Parts
                   </button>
+                  <button
+                    onClick={() => setActiveTab('garage')}
+                    className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
+                      activeTab === 'garage'
+                        ? 'bg-pit-accent/15 text-pit-accent border border-pit-accent/30'
+                        : 'text-gray-500 hover:text-gray-300 border border-transparent'
+                    }`}
+                  >
+                    Garage
+                  </button>
                 </div>
-                {/* Empty state when no car */}
-                {!vehicleId ? (
+                {activeTab === 'garage' ? (
+                  <Garage
+                    vehicleId={vehicleId}
+                    onLoadCar={(vid) => {
+                      setVehicleId(vid);
+                      setActiveTab('tune');
+                    }}
+                  />
+                ) : !vehicleId ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center px-6 gap-3">
                     <Wrench size={28} className="text-gray-700" />
                     <div className="text-sm text-gray-500">No car detected</div>
