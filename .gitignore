@@ -10,3 +10,4 @@ __pycache__/
 venv/
 *.egg-info/
 *.spec
+eval/last_results.json

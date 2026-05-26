@@ -8,7 +8,9 @@
     "build": "vite build && electron-builder",
     "vite": "vite",
     "electron": "electron .",
-    "start": "electron ."
+    "start": "electron .",
+    "eval": "node eval/run.js",
+    "eval:verbose": "node eval/run.js --verbose"
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
