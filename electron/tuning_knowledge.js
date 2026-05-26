@@ -193,6 +193,11 @@ When the driver reports an issue, follow this reasoning chain:
 | "Tires are too hot" | Tire temp >100°C | Increase pressure (+0.1-0.2) | Reduce camber magnitude | Don't change springs |
 | "No traction off the line" | High slip ratio at low speed | Lower rear tire pressure (−0.2) | Soften rear springs (−10%) | Don't change aero (no speed) |
 | "Brakes lock up" | Negative slip ratio under braking | Reduce brake pressure (−5-10%) | Shift balance toward rear (−2-3%) | Don't change suspension |
+| "Car hops/skips on curbs" | Rapid suspension oscillation | Increase rebound damping (+1-2) | Soften springs slightly (−5%) | Don't stiffen ARBs (makes hopping worse) |
+| "Engine bogs, drops revs mid-slide" | Low avg RPM, time below powerband | Shorten final drive (−0.05-0.10) | Try one gear lower | Don't change suspension or tires |
+| "Car pulls to one side" | Asymmetric tire temps or slip | Check camber symmetry L vs R | Check toe symmetry L vs R | Don't change ARBs (symmetric issue) |
+| "Car wallows / boat-like" | High body roll, slow direction change | Stiffen ARBs (+5-8 both) | Increase rebound damping (+1-2) | Don't change tire pressure for this |
+| "Oversteer only under braking" | Rear slip spikes when decelerating | Move brake balance forward (+2-3%) | Reduce diff decel (−5-10%) | Don't change ARBs or springs |
 
 ### ADJUSTMENT MAGNITUDES — GOLDEN RULES
 NEVER make large changes. The game responds significantly to small adjustments.
