@@ -420,7 +420,7 @@ function resetSessionTokens() {
 
 function initializeGenAI(key, model) {
   apiKey = key;
-  modelName = model || 'gemini-2.5-flash';
+  modelName = model || 'gemini-3.1-flash-lite';
   
   try {
     genaiClient = new GoogleGenAI({ apiKey });
