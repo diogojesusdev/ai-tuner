@@ -89,6 +89,9 @@ contextBridge.exposeInMainWorld('pitwall', {
   onVoiceError: (callback) => {
     ipcRenderer.on('voice-error', (event, data) => callback(data));
   },
+  onCarDetected: (callback) => {
+    ipcRenderer.on('car-detected', (event, data) => callback(data));
+  },
 
   // Cleanup listeners
   removeAllListeners: (channel) => {

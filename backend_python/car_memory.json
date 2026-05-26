@@ -41,6 +41,16 @@
       },
       "car_name": "Toyota Supra MK5",
       "hp_tier": "low"
+    },
+    "382": {
+      "discipline": "drifting",
+      "past_modifications": [
+        "Decrease rear tire pressure from 2.2 to 2.0 Bar",
+        "Stiffen rear ARB from 30.00 to 35.00 to increase oversteer tendency",
+        "Shift brake balance from 50% to 55% front to aid trail-braking entry"
+      ],
+      "tune": {},
+      "car_name": "E36 M3"
     }
   }
 }

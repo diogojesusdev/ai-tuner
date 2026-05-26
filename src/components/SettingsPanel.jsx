@@ -7,7 +7,10 @@ import { ArrowLeft, Key, Cpu, Mic, Keyboard, Download, RefreshCw } from 'lucide-
  */
 
 const AVAILABLE_MODELS = [
-  { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Recommended)' },
+  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Faster/Cheaper)' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Best Quality)' },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
 ];
 
 const STT_MODELS = [
@@ -95,7 +98,7 @@ function TokenUsageDisplay() {
 
 function SettingsPanel({ onClose }) {
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('gemini-3.1-flash-lite');
+  const [model, setModel] = useState('gemini-2.5-flash');
   const [pttKey, setPttKey] = useState('caps_lock');
   const [inputDevice, setInputDevice] = useState('');
   const [inputDevices, setInputDevices] = useState([]);
@@ -110,7 +113,7 @@ function SettingsPanel({ onClose }) {
   // Load saved settings from localStorage
   useEffect(() => {
     const savedKey = localStorage.getItem('pitwall_api_key') || '';
-    const savedModel = localStorage.getItem('pitwall_model') || 'gemini-3.1-flash-lite';
+    const savedModel = localStorage.getItem('pitwall_model') || 'gemini-2.5-flash';
     const savedPtt = localStorage.getItem('pitwall_ptt_key') || 'caps_lock';
     const savedToggle = localStorage.getItem('pitwall_shortcut_toggle') || 'F10';
     const savedWindow = localStorage.getItem('pitwall_telemetry_window') || '5';

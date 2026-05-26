@@ -187,7 +187,7 @@ function App() {
     if (!savedKey) {
       setShowSettings(true);
     } else if (window.pitwall) {
-      const savedModel = localStorage.getItem('pitwall_model') || 'gemini-3.1-flash-lite';
+      const savedModel = localStorage.getItem('pitwall_model') || 'gemini-2.5-flash';
       window.pitwall.setApiKey(savedKey, savedModel);
     }
   }, []);
@@ -212,16 +212,6 @@ function App() {
       if (!telemetryActive) setTelemetryActive(true);
       if (data.vehicle_id && data.vehicle_id !== vehicleIdRef.current) {
         setVehicleId(data.vehicle_id);
-        // Check if there's an existing session for this vehicle
-        const existing = sessionsRef.current.find((s) => s.vehicleId === data.vehicle_id);
-        if (existing) {
-          if (existing.id !== activeSessionIdRef.current) {
-            switchToSession(existing.id);
-          }
-        } else {
-          // Auto-create new session for new vehicle
-          createNewSession(null, data.vehicle_id);
-        }
       }
     });
 
@@ -307,6 +297,21 @@ function App() {
       }
     });
 
+    window.pitwall.onCarDetected((data) => {
+      // Silently update car context — no session creation, no LLM prompting
+      if (data.car_name) {
+        setCarName(data.car_name);
+      }
+      // Show a subtle system notification in current chat
+      const label = data.car_name
+        ? `${data.car_name}${data.discipline ? ` (${data.discipline})` : ''}`
+        : `Vehicle #${data.vehicle_id}`;
+      setMessages((prev) => [
+        ...prev,
+        { role: 'system', text: `🚗 Detected: ${label}`, timestamp: Date.now() / 1000 },
+      ]);
+    });
+
     window.pitwall.onTokenUsage((data) => {
       if (data?.session) {
         setSessionTokens(data.session);
@@ -325,6 +330,7 @@ function App() {
         window.pitwall.removeAllListeners('voice-error');
         window.pitwall.removeAllListeners('agent-state');
         window.pitwall.removeAllListeners('car-memory');
+        window.pitwall.removeAllListeners('car-detected');
         window.pitwall.removeAllListeners('token-usage');
       }
     };

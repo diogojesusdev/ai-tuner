@@ -343,6 +343,8 @@ class AITunerBackend:
 
     def _save_car_memory(self, vehicle_id, updates: dict):
         """Save updated car memory including tune values."""
+        if vehicle_id is None or str(vehicle_id) in ("None", "0", ""):
+            return
         try:
             with open(CAR_MEMORY_PATH, "r") as f:
                 data = json.load(f)
