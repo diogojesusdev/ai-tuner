@@ -9,6 +9,7 @@ import { ArrowLeft, Key, Cpu, Mic, Keyboard, Download, RefreshCw } from 'lucide-
 const AVAILABLE_MODELS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Recommended)' },
   { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Faster/Cheaper)' },
+  { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
   { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Best Quality)' },
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
 ];

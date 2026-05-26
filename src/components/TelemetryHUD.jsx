@@ -1,11 +1,11 @@
 import React from 'react';
-import { Wifi, WifiOff } from 'lucide-react';
+import { Wifi, WifiOff, BarChart3 } from 'lucide-react';
 
 /**
  * TelemetryHUD - Compact speed/RPM display with connection status icon.
  */
 
-function TelemetryHUD({ telemetry, telemetryActive, carName }) {
+function TelemetryHUD({ telemetry, telemetryActive, carName, agentState }) {
   const speed = telemetry ? Math.round(telemetry.speed_kmh) : '--';
   const rpm = telemetry ? Math.round(telemetry.engine_rpm) : '--';
   const gear = telemetry ? telemetry.current_gear : '-';
@@ -57,6 +57,14 @@ function TelemetryHUD({ telemetry, telemetryActive, carName }) {
       <div className="text-lg font-bold text-pit-accent tabular-nums">
         {gear !== -1 ? `G${gear}` : 'R'}
       </div>
+
+      {/* Telemetry collection indicator */}
+      {agentState === 'COLLECTING_DATA' && (
+        <div className="flex items-center gap-1 text-pit-warn" title="Recording telemetry for AI analysis">
+          <BarChart3 size={12} className="animate-pulse" />
+          <span className="text-[9px]">📊</span>
+        </div>
+      )}
     </div>
   );
 }

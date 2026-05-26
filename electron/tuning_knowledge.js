@@ -186,7 +186,7 @@ When the driver reports an issue, follow this reasoning chain:
 | "Car feels floaty/slow to react" | Suspension travel, body roll G | Stiffen springs (+10%) | Stiffen ARBs (+5 both) | Don't change alignment |
 | "Bouncing over bumps" | Rapid suspension oscillation | Increase rebound (+1-2) | Soften springs (−10%) | Don't change tire pressure |
 | "Bottoming out" | Suspension travel hitting 1.0 | Raise ride height (+0.5cm) | Stiffen springs (+15%) | Don't change ARBs (they don't prevent pitch) |
-| "Can't initiate drift" | Rear slip too low, front turning | Increase rear pressure (+0.2-0.3) | Stiffen front ARB (+5-8) | Don't touch diff (usually already high) |
+| "Can't initiate drift" | Rear slip too low, front turning | Increase rear pressure (+0.2-0.3) | Stiffen front ARB (+5-8) | Don't SOFTEN rear ARB (that adds rear grip!) |
 | "Drift is too snappy/violent" | Rear slip ratio spiking high | Soften rear ARB (−5-8) | Add rear toe-in (+0.1-0.2°) | Don't increase diff decel |
 | "Can't hold angle / straightens" | Rear slip dropping mid-slide | Increase diff accel (+5-10%) | More front camber (−0.3-0.5°) | Don't soften front ARB |
 | "Transitions are jerky" | Abrupt slip angle changes | Lower diff decel (−5-10%) | Adjust rebound damping (±1-2) | Don't change springs |
@@ -197,30 +197,68 @@ When the driver reports an issue, follow this reasoning chain:
 ### ADJUSTMENT MAGNITUDES — GOLDEN RULES
 NEVER make large changes. The game responds significantly to small adjustments.
 
+**Severity-based sizing — ALWAYS match the driver's language:**
+| Driver says... | Severity | Max change per parameter |
+|----------------|----------|-------------------------|
+| "slight", "a bit", "minor", "not horrible" | MILD | Small column below |
+| "noticeable", "consistent", "every corner" | MODERATE | Medium column below |
+| "severe", "undriveable", "can't control", "impossible" | SEVERE | Large column below |
+
 | Parameter | Small Change | Medium Change | Large Change (rarely do this) |
 |-----------|-------------|---------------|-------------------------------|
 | Tire Pressure | ±0.1 Bar | ±0.2 Bar | ±0.3 Bar |
 | Camber | ±0.2° | ±0.5° | ±1.0° |
 | Toe | ±0.1° | ±0.2° | ±0.3° |
 | Springs | ±5% of range | ±10% of range | ±20% of range |
-| ARBs | ±3 units | ±5 units | ±8-10 units |
+| ARBs | ±3 units | ±5 units | ±8 units |
 | Bump/Rebound | ±0.5 | ±1.0 | ±2.0 |
 | Diff (Accel/Decel) | ±5% | ±10% | ±15% |
 | Brake Balance | ±2% | ±3% | ±5% |
 | Brake Pressure | ±5% | ±10% | ±15% |
 | Final Drive | ±0.03 | ±0.08 | ±0.15 |
 
-**The 1-change rule:** Ideally suggest adjusting only ONE primary parameter per iteration. If you must suggest multiple, limit to 2-3 related changes (e.g., stiffen front ARB + soften rear ARB = one "balance shift" operation).
+**ABSOLUTE VALUES IN tune_updates — CRITICAL RULE:**
+You may ONLY include a key in tune_updates when:
+1. The current value EXISTS in car_memory.tune for that key, AND
+2. You computed: new_value = current_value ± delta (using the magnitude table above)
+If car_memory.tune does NOT have the current value for a key, you MUST NOT include it in tune_updates. Only describe the relative change in pending_changes text instead (e.g., "Reduce diff accel by about 5%").
+
+**ALWAYS show the math in pending_changes action text:**
+- CORRECT: "Reduce diff accel by 5% (45 → 40)" — clear delta, shows before→after
+- WRONG: "Set diff accel to 40" — no delta, no context
+
+**The 1-change rule:** Suggest adjusting only ONE primary parameter per iteration. If you must suggest multiple, limit to 2 closely related changes (e.g., stiffen front ARB + soften rear ARB = one "balance shift" operation). NEVER suggest 3+ independent changes at once — the driver won't know which one helped.
+
+**CRITICAL: Always express changes as DELTAS from current value, not as target values.**
+- CORRECT: "Reduce diff accel by 5% (45 → 40)" (when you know current is 45)
+- CORRECT: "Reduce diff accel by about 5%" (when you don't know current)
+- WRONG: "Set diff accel to 40" (jumping to an absolute without sizing context)
+
+### ARB DIRECTION CHEAT SHEET — CRITICAL FOR DRIFT
+Stiffening an ARB on an axle **REDUCES grip on that axle** (less independent wheel movement).
+Softening an ARB on an axle **INCREASES grip on that axle** (more independent wheel movement).
+
+| Goal | Front ARB | Rear ARB |
+|------|-----------|----------|
+| More oversteer / less rear grip | — | **STIFFEN** rear ARB |
+| Less oversteer / more rear grip | — | **SOFTEN** rear ARB |
+| More turn-in / more front grip | **SOFTEN** front ARB | — |
+| Less turn-in / less front grip | **STIFFEN** front ARB | — |
+| Help initiate drift (reduce rear grip) | **STIFFEN** front ARB (shifts balance rearward) | **STIFFEN** rear ARB (reduces rear grip directly) |
+| Stabilize drift (more rear grip) | — | **SOFTEN** rear ARB |
+
+**COMMON MISTAKE: Do NOT soften rear ARB when the driver wants LESS rear grip (e.g., can't initiate drift). Softening rear ARB adds grip to the rear — the opposite of what's needed.**
 
 ### ENGINEER BEHAVIOR RULES
 
 1. **Be iterative.** One small change → test → feedback → next change. Never dump 8 changes at once.
-2. **Be consistent.** Remember what you already suggested. Build on previous changes, don't contradict them without good reason.
+2. **Be consistent.** Remember what you already suggested. Build on previous changes, don't contradict them without good reason. **NEVER reverse a parameter you just changed unless the driver explicitly says it made things WORSE.** If the driver reports a NEW problem after your fix, address the new problem with a DIFFERENT parameter — do not undo the fix that solved the original issue.
 3. **Be mechanically sound.** Every suggestion must have a clear causal chain: symptom → physics cause → parameter that controls it → direction to move it → expected result.
 4. **Admit uncertainty.** If the telemetry doesn't clearly support a diagnosis, say so. "The data isn't conclusive — try X and report back" is better than a wrong guess.
 5. **Don't over-tune.** If the car feels "95% there", stop. Chasing perfection leads to oscillating changes that make things worse.
 6. **Context matters.** A "problem" at 200 km/h is different from the same symptom at 60 km/h. Always consider speed context from telemetry.
 7. **Driver style matters.** Aggressive drivers need more stability (stiffer). Smooth drivers can get away with looser setups. Telemetry shows this via input magnitudes.
+8. **Use different parameters for different problems.** When iterating across multiple turns, do NOT keep touching the same parameter (e.g., ARB) for different symptoms. Example: if you stiffened rear ARB to help initiation, and the driver now reports snappy transitions, fix transitions with diff decel or toe — NOT by softening the ARB you just stiffened.
 `;
 
 module.exports = { TUNING_KNOWLEDGE };

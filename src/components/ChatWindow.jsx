@@ -1,5 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, CheckCircle2, Circle, Send, Mic, Image, X } from 'lucide-react';
+import { MessageCircle, CheckCircle2, Circle, Send, Mic, Image, X, Check, XCircle } from 'lucide-react';
+
+function relativeTime(ts) {
+  if (!ts) return '';
+  const now = Date.now() / 1000;
+  const diff = Math.max(0, now - ts);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return new Date(ts * 1000).toLocaleDateString();
+}
 
 /**
  * ChatWindow - Conversational UI with the AI race engineer.
@@ -10,7 +20,8 @@ import { MessageCircle, CheckCircle2, Circle, Send, Mic, Image, X } from 'lucide
 function ChatWindow({ messages, pendingChanges, onConfirmChanges, onDismissChanges, onSendMessage, isListening, isThinking, quickActions, onQuickAction }) {
   const [inputText, setInputText] = useState('');
   const [pastedImages, setPastedImages] = useState([]); // [{data: base64, mimeType, preview: dataUrl}]
-  const [checkedChanges, setCheckedChanges] = useState(new Set());
+  const [appliedChanges, setAppliedChanges] = useState(new Set());
+  const [skippedChanges, setSkippedChanges] = useState(new Set());
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -63,29 +74,32 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onDismissChang
     }
   };
 
-  const toggleChange = (id) => {
-    setCheckedChanges((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+  const handleApply = (id) => {
+    setAppliedChanges((prev) => new Set(prev).add(id));
+    onConfirmChanges([id]);
   };
 
-  const handleConfirm = () => {
-    if (checkedChanges.size === 0) return;
-    onConfirmChanges(Array.from(checkedChanges));
-    setCheckedChanges(new Set());
+  const handleSkip = (id) => {
+    setSkippedChanges((prev) => new Set(prev).add(id));
   };
 
-  const handleConfirmAll = () => {
-    const allIds = pendingChanges.map((c) => c.id);
-    onConfirmChanges(allIds);
-    setCheckedChanges(new Set());
+  const handleApplyAll = () => {
+    const remaining = pendingChanges.filter(c => !appliedChanges.has(c.id) && !skippedChanges.has(c.id)).map(c => c.id);
+    if (remaining.length > 0) {
+      setAppliedChanges((prev) => {
+        const next = new Set(prev);
+        remaining.forEach(id => next.add(id));
+        return next;
+      });
+      onConfirmChanges(remaining);
+    }
   };
+
+  // Reset applied/skipped state when new pending changes arrive
+  useEffect(() => {
+    setAppliedChanges(new Set());
+    setSkippedChanges(new Set());
+  }, [pendingChanges.length]);
 
   return (
     <div className="glass-panel h-full flex flex-col rounded-none border-x-0">
@@ -155,8 +169,30 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onDismissChang
               )}
               {msg.text}
             </div>
+            {msg.timestamp && (
+              <div className={`text-[8px] text-gray-600 mt-0.5 ${msg.role === 'user' ? 'text-right' : 'text-left'} px-1`}>
+                {relativeTime(msg.timestamp)}
+              </div>
+            )}
           </div>
         ))}
+
+        {/* Inline Quick Actions */}
+        {quickActions && quickActions.length > 0 && !isThinking && (
+          <div className="text-left animate-fade-in">
+            <div className="flex flex-wrap gap-1.5 max-w-[90%]">
+              {quickActions.map((action, i) => (
+                <button
+                  key={i}
+                  onClick={() => onQuickAction(action.value)}
+                  className="px-2.5 py-1 rounded-full text-[10px] bg-pit-accent/10 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/20 transition-colors"
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Thinking indicator in chat */}
         {isThinking && (
@@ -177,69 +213,57 @@ function ChatWindow({ messages, pendingChanges, onConfirmChanges, onDismissChang
       {/* Pending Changes Checklist */}
       {pendingChanges.length > 0 && (
         <div className="px-4 py-2 border-t border-gray-800/50 bg-gray-900/30">
-          <div className="text-[10px] text-gray-500 uppercase mb-1.5">
-            Pending Setup Changes
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] text-gray-500 uppercase">Setup Changes</span>
+            {pendingChanges.some(c => !appliedChanges.has(c.id) && !skippedChanges.has(c.id)) && (
+              <button
+                onClick={handleApplyAll}
+                className="text-[9px] px-1.5 py-0.5 rounded bg-pit-accent/15 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/25 transition-colors"
+              >
+                Apply All
+              </button>
+            )}
           </div>
           <div className="space-y-1.5 max-h-32 overflow-y-auto">
-            {pendingChanges.map((change) => (
-              <div
-                key={change.id}
-                onClick={() => toggleChange(change.id)}
-                className="flex items-start gap-2 cursor-pointer group"
-              >
-                <div className="mt-0.5 flex-shrink-0">
-                  {checkedChanges.has(change.id) ? (
-                    <CheckCircle2 size={14} className="text-pit-accent" />
-                  ) : (
-                    <Circle size={14} className="text-gray-600 group-hover:text-gray-400" />
+            {pendingChanges.map((change) => {
+              const isApplied = appliedChanges.has(change.id);
+              const isSkipped = skippedChanges.has(change.id);
+              return (
+                <div key={change.id} className="flex items-center gap-2">
+                  <span className={`flex-1 text-xs leading-tight ${
+                    isApplied ? 'text-pit-accent line-through opacity-60' :
+                    isSkipped ? 'text-gray-600 line-through opacity-40' :
+                    'text-gray-300'
+                  }`}>
+                    {change.action}
+                  </span>
+                  {!isApplied && !isSkipped && (
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => handleApply(change.id)}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-pit-accent/15 text-pit-accent hover:bg-pit-accent/25 transition-colors flex items-center gap-0.5"
+                        title="Mark as applied"
+                      >
+                        <Check size={9} /> Done
+                      </button>
+                      <button
+                        onClick={() => handleSkip(change.id)}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-gray-700/40 text-gray-500 hover:text-gray-300 hover:bg-gray-700/60 transition-colors"
+                        title="Skip this change"
+                      >
+                        Skip
+                      </button>
+                    </div>
+                  )}
+                  {isApplied && (
+                    <span className="text-[9px] text-pit-accent/60 flex items-center gap-0.5"><Check size={9} /> Applied</span>
+                  )}
+                  {isSkipped && (
+                    <span className="text-[9px] text-gray-600">Skipped</span>
                   )}
                 </div>
-                <span className={`text-xs leading-tight transition-colors ${
-                  checkedChanges.has(change.id) ? 'text-pit-accent' : 'text-gray-300 group-hover:text-gray-100'
-                }`}>
-                  {change.action}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 mt-2">
-            <button
-              onClick={handleConfirm}
-              disabled={checkedChanges.size === 0}
-              className="text-[10px] px-2 py-1 rounded bg-pit-accent/20 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              Confirm Selected
-            </button>
-            <button
-              onClick={handleConfirmAll}
-              className="text-[10px] px-2 py-1 rounded bg-gray-700/50 text-gray-300 border border-gray-600/30 hover:bg-gray-700 transition-colors"
-            >
-              Confirm All
-            </button>
-            <button
-              onClick={onDismissChanges}
-              className="text-[10px] px-2 py-1 rounded bg-gray-800/50 text-gray-500 border border-gray-700/30 hover:text-gray-300 hover:bg-gray-700/50 transition-colors ml-auto"
-            >
-              Ignore
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Action Buttons */}
-      {quickActions && quickActions.length > 0 && (
-        <div className="px-4 py-2 border-t border-gray-800/50 bg-gray-900/30">
-          <div className="text-[10px] text-gray-500 mb-1.5">Quick select:</div>
-          <div className="flex flex-wrap gap-1.5">
-            {quickActions.map((action, i) => (
-              <button
-                key={i}
-                onClick={() => onQuickAction(action.value)}
-                className="px-2.5 py-1 rounded-full text-[10px] bg-pit-accent/10 text-pit-accent border border-pit-accent/30 hover:bg-pit-accent/20 transition-colors"
-              >
-                {action.label}
-              </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

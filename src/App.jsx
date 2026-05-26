@@ -15,6 +15,31 @@ const STATE_LABELS = {
   UPDATING_TUNE: { text: 'Updating', color: 'text-pit-info' },
 };
 
+const DISCIPLINE_ICONS = {
+  drifting: '🚗💨',
+  drift: '🚗💨',
+  racing: '🏎️',
+  grip: '🏎️',
+  rally: '🌲',
+  offroad: '🌲',
+  drag: '🏁',
+  street: '🌃',
+  touge: '⛰️',
+};
+
+function getDisciplineIcon(session) {
+  const disc = (session.discipline || '').toLowerCase();
+  for (const [key, icon] of Object.entries(DISCIPLINE_ICONS)) {
+    if (disc.includes(key)) return icon;
+  }
+  // Try to infer from messages
+  const firstMsg = session.messages?.[0]?.text?.toLowerCase() || '';
+  for (const [key, icon] of Object.entries(DISCIPLINE_ICONS)) {
+    if (firstMsg.includes(key)) return icon;
+  }
+  return '🔧';
+}
+
 function formatTokens(n) {
   if (!n) return '0';
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -344,6 +369,21 @@ function App() {
     };
   }, []);
 
+  // Keyboard shortcuts for tab switching (Ctrl+1/2/3)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (showSettings) return;
+      switch (e.key) {
+        case '1': e.preventDefault(); setActiveTab('chat'); break;
+        case '2': e.preventDefault(); setActiveTab('tune'); break;
+        case '3': e.preventDefault(); setActiveTab('sessions'); break;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSettings]);
+
   const handleConfirmChanges = useCallback(async (confirmedIds) => {
     if (!window.pitwall) return;
     const result = await window.pitwall.confirmChanges(confirmedIds);
@@ -419,7 +459,7 @@ function App() {
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Telemetry HUD (compact speed/RPM bar) */}
-          <TelemetryHUD telemetry={telemetry} telemetryActive={telemetryActive} carName={carName} />
+          <TelemetryHUD telemetry={telemetry} telemetryActive={telemetryActive} carName={carName} agentState={agentState} />
 
           {/* Tab navigation + agent state */}
           <div className="flex items-center border-b border-gray-800/50 px-2">
@@ -437,24 +477,13 @@ function App() {
             <button
               onClick={() => setActiveTab('tune')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-b-2 transition-colors ${
-                activeTab === 'tune'
+                activeTab === 'tune' || activeTab === 'parts'
                   ? 'border-pit-accent text-pit-accent'
                   : 'border-transparent text-gray-500 hover:text-gray-300'
               }`}
             >
               <Wrench size={12} />
-              Tune
-            </button>
-            <button
-              onClick={() => setActiveTab('parts')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-b-2 transition-colors ${
-                activeTab === 'parts'
-                  ? 'border-pit-accent text-pit-accent'
-                  : 'border-transparent text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              <Cog size={12} />
-              Parts
+              Setup
             </button>
             <button
               onClick={() => setActiveTab('sessions')}
@@ -481,13 +510,6 @@ function App() {
           <div className="flex-1 min-h-0">
             {activeTab === 'chat' && (
               <div className="h-full flex flex-col">
-                {(sessionTokens.input > 0 || sessionTokens.output > 0) && (
-                  <div className="px-4 py-1 border-b border-gray-800/50 flex items-center gap-2">
-                    <span className="text-[9px] text-gray-500">Session tokens:</span>
-                    <span className="text-[9px] text-pit-info tabular-nums">{formatTokens(sessionTokens.input)} in</span>
-                    <span className="text-[9px] text-pit-accent tabular-nums">{formatTokens(sessionTokens.output)} out</span>
-                  </div>
-                )}
                 <div className="flex-1 min-h-0">
                   <ChatWindow
                     messages={messages}
@@ -503,11 +525,50 @@ function App() {
                 </div>
               </div>
             )}
-            {activeTab === 'tune' && (
-              <TuneSheet vehicleId={vehicleId} />
-            )}
-            {activeTab === 'parts' && (
-              <PartsSheet vehicleId={vehicleId} />
+            {(activeTab === 'tune' || activeTab === 'parts') && (
+              <div className="h-full flex flex-col">
+                {/* Sub-tab toggle */}
+                <div className="px-4 py-1.5 border-b border-gray-800/50 flex gap-2">
+                  <button
+                    onClick={() => setActiveTab('tune')}
+                    className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
+                      activeTab === 'tune'
+                        ? 'bg-pit-accent/15 text-pit-accent border border-pit-accent/30'
+                        : 'text-gray-500 hover:text-gray-300 border border-transparent'
+                    }`}
+                  >
+                    Tuning Values
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('parts')}
+                    className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
+                      activeTab === 'parts'
+                        ? 'bg-pit-accent/15 text-pit-accent border border-pit-accent/30'
+                        : 'text-gray-500 hover:text-gray-300 border border-transparent'
+                    }`}
+                  >
+                    Installed Parts
+                  </button>
+                </div>
+                {/* Empty state when no car */}
+                {!vehicleId ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center px-6 gap-3">
+                    <Wrench size={28} className="text-gray-700" />
+                    <div className="text-sm text-gray-500">No car detected</div>
+                    <div className="text-[11px] text-gray-600 leading-relaxed max-w-[280px]">
+                      Launch Forza Horizon 6 and drive a car to start recording setup data. AI Tuner will automatically detect your vehicle via telemetry.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 min-h-0">
+                    {activeTab === 'tune' ? (
+                      <TuneSheet vehicleId={vehicleId} />
+                    ) : (
+                      <PartsSheet vehicleId={vehicleId} />
+                    )}
+                  </div>
+                )}
+              </div>
             )}
             {activeTab === 'sessions' && (
               <div className="h-full flex flex-col">
@@ -547,12 +608,15 @@ function App() {
                       }`}
                       onClick={() => { switchToSession(session.id); setActiveTab('chat'); }}
                     >
+                      <span className="text-sm flex-shrink-0" title={session.discipline || 'Unknown discipline'}>
+                        {getDisciplineIcon(session)}
+                      </span>
                       <div className="flex-1 min-w-0">
                         <div className="text-xs text-gray-200 truncate">
                           {session.carName || `Vehicle ${session.vehicleId || '—'}`}
                         </div>
                         <div className="text-[9px] text-gray-500">
-                          {session.messages?.length || 0} messages · {new Date(session.updatedAt || session.createdAt).toLocaleDateString()}
+                          {session.messages?.length || 0} msgs · {new Date(session.updatedAt || session.createdAt).toLocaleDateString()}
                           {session.tokens && (session.tokens.input > 0 || session.tokens.output > 0) && (
                             <span className="ml-1.5 text-gray-600">· {formatTokens(session.tokens.input + session.tokens.output)} tok</span>
                           )}
