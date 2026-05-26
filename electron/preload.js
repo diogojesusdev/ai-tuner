@@ -29,6 +29,12 @@ contextBridge.exposeInMainWorld('pitwall', {
   exportTune: (vehicleId, carName) => ipcRenderer.invoke('export-tune', { vehicleId, carName }),
   importTune: () => ipcRenderer.invoke('import-tune'),
   
+  // Parts sheet
+  getParts: (vehicleId) => ipcRenderer.invoke('get-parts', { vehicleId }),
+  saveParts: (vehicleId, parts) => ipcRenderer.invoke('save-parts', { vehicleId, parts }),
+  exportParts: (vehicleId) => ipcRenderer.invoke('export-parts', { vehicleId }),
+  importParts: () => ipcRenderer.invoke('import-parts'),
+  
   // Audio input devices
   getInputDevices: () => ipcRenderer.invoke('get-input-devices'),
   setInputDevice: (deviceIndex) => ipcRenderer.invoke('set-input-device', { deviceIndex }),
@@ -37,7 +43,9 @@ contextBridge.exposeInMainWorld('pitwall', {
   getTokenUsage: () => ipcRenderer.invoke('get-token-usage'),
   resetSessionTokens: () => ipcRenderer.invoke('reset-session-tokens'),
   onTokenUsage: (callback) => {
-    ipcRenderer.on('token-usage', (event, data) => callback(data));
+    const wrapped = (event, data) => callback(data);
+    ipcRenderer.on('token-usage', wrapped);
+    return wrapped;
   },
   
   // Auto-update
@@ -80,6 +88,9 @@ contextBridge.exposeInMainWorld('pitwall', {
   onTuneUpdate: (callback) => {
     ipcRenderer.on('tune-update', (event, data) => callback(data));
   },
+  onPartsUpdate: (callback) => {
+    ipcRenderer.on('parts-update', (event, data) => callback(data));
+  },
   onAgentState: (callback) => {
     ipcRenderer.on('agent-state', (event, data) => callback(data));
   },
@@ -96,5 +107,8 @@ contextBridge.exposeInMainWorld('pitwall', {
   // Cleanup listeners
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
+  },
+  removeListener: (channel, handler) => {
+    ipcRenderer.removeListener(channel, handler);
   },
 });

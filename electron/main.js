@@ -123,6 +123,7 @@ You MUST reply as JSON:
     { "id": "unique-id", "action": "Specific adjustment description" }
   ],
   "tune_updates": { "field_key": "new_absolute_value" },
+  "parts_updates": { "part_key": "installed_value" },
   "next_state": "READY",
   "user_input_request": {
     "type": "car_identity | tune_values | confirmation | freeform",
@@ -134,6 +135,7 @@ You MUST reply as JSON:
 - "reply": Natural language response (always required)
 - "pending_changes": Array of suggested adjustments (empty if none). Each has a unique "id" and "action" string. When you know the current value, ALWAYS include the resulting value in the action like: "Increase rear tire pressure by +0.3 Bar (2.4 → 2.7)". This saves the driver from doing mental math.
 - "tune_updates": Object mapping tune keys to new absolute values. Only include when you KNOW the absolute value. IMPORTANT: "front" means BOTH FL and FR keys, "rear" means BOTH RL and RR keys — always set both sides. Keys: tire_pressure_fl, tire_pressure_fr, tire_pressure_rl, tire_pressure_rr, camber_fl, camber_fr, camber_rl, camber_rr, toe_fl, toe_fr, toe_rl, toe_rr, spring_front, spring_rear, ride_height_front, ride_height_rear, bump_front, bump_rear, rebound_front, rebound_rear, arb_front, arb_rear, aero_front, aero_rear, brake_balance, brake_pressure, diff_accel, diff_decel, final_drive.
+- "parts_updates": Object mapping part keys to installed values. Use when the user tells you what parts are installed. Keys: drivetrain_layout, transmission, diff_type, clutch, driveline, aspiration, engine_swap, intake, exhaust, camshaft, intercooler, oil_cooling, flywheel, springs_type, arb_type, brakes_type, roll_cage, chassis_reinforcement, weight_reduction, tire_compound, tire_width_front, tire_width_rear, rim_size, front_aero, rear_aero.
 - "next_state": Suggest what state the agent should transition to. Options: IDENTIFY_CAR, COLLECTING_DATA, READY, SUGGESTING, UPDATING_TUNE.
 - "user_input_request": When you need structured input from the user. "type" indicates what kind of data you need. Types: "discipline" (shows racing/drifting/rally/drag buttons), "hp_tier" (shows low/mid/high HP buttons), "car_identity" (ask for car name), "tune_values" (ask for tune fields), "go_test" (shows a "Go test!" button — use this when telling the driver to go back on track to test changes), "confirmation", "freeform". "fields" lists the specific tune keys if requesting tune values.
 
@@ -461,6 +463,7 @@ function buildContextPayload(userText) {
       car_name: currentCarMemory.car_name || null,
       discipline: currentCarMemory.discipline || null,
       hp_tier: currentCarMemory.hp_tier || null,
+      parts: currentCarMemory.parts || {},
       tune: currentCarMemory.tune || {},
       past_modifications: (currentCarMemory.past_modifications || []).slice(-10),
     };
@@ -528,6 +531,17 @@ function handleAIResponse(text) {
         vehicle_id: currentVehicleId,
         updates: identityUpdates,
       });
+    }
+  }
+
+  // If LLM provided parts updates, save immediately (parts are facts, not suggestions)
+  if (parsed.parts_updates && Object.keys(parsed.parts_updates).length > 0) {
+    sendToBackend('UPDATE_CAR_MEMORY', {
+      vehicle_id: currentVehicleId,
+      updates: { parts: parsed.parts_updates },
+    });
+    if (mainWindow) {
+      mainWindow.webContents.send('parts-update', { parts: parsed.parts_updates });
     }
   }
 
@@ -773,6 +787,7 @@ ipcMain.handle('export-tune', async (event, { vehicleId, carName }) => {
     car_name: tuneData.car_name || carName || '',
     discipline: tuneData.discipline || '',
     hp_tier: tuneData.hp_tier || '',
+    parts: tuneData.parts || {},
     tune: tuneData.tune || {},
     exported_at: new Date().toISOString(),
   };
@@ -824,6 +839,103 @@ ipcMain.handle('import-tune', async () => {
       vehicleId: importId,
       carName: data.car_name || path.basename(result.filePaths[0], '.json'),
     };
+  } catch (e) {
+    return { success: false, error: `Failed to parse file: ${e.message}` };
+  }
+});
+
+// ============ Parts Sheet IPC ============
+
+ipcMain.handle('get-parts', async (event, { vehicleId }) => {
+  if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
+    return null;
+  }
+  return new Promise((resolve) => {
+    pendingTuneResolve = resolve;
+    sendToBackend('GET_CAR_MEMORY', { vehicle_id: vehicleId });
+    setTimeout(() => {
+      if (pendingTuneResolve === resolve) {
+        pendingTuneResolve = null;
+        resolve(null);
+      }
+    }, 2000);
+  }).then((data) => data?.parts || null);
+});
+
+ipcMain.handle('save-parts', async (event, { vehicleId, parts }) => {
+  sendToBackend('UPDATE_CAR_MEMORY', {
+    vehicle_id: vehicleId || currentVehicleId,
+    updates: { parts },
+  });
+  return { success: true };
+});
+
+ipcMain.handle('export-parts', async (event, { vehicleId }) => {
+  if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) {
+    return { success: false, error: 'Backend not connected' };
+  }
+  const carData = await new Promise((resolve) => {
+    pendingTuneResolve = resolve;
+    sendToBackend('GET_CAR_MEMORY', { vehicle_id: vehicleId });
+    setTimeout(() => {
+      if (pendingTuneResolve === resolve) {
+        pendingTuneResolve = null;
+        resolve(null);
+      }
+    }, 2000);
+  });
+
+  if (!carData) return { success: false, error: 'Could not load parts data' };
+
+  const safeName = (carData.car_name || `vehicle_${vehicleId}`).replace(/[^a-zA-Z0-9_\- ]/g, '');
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Parts',
+    defaultPath: `${safeName}_parts.json`,
+    filters: [{ name: 'JSON Parts File', extensions: ['json'] }],
+  });
+
+  if (result.canceled) return { success: false, canceled: true };
+
+  const exportData = {
+    _format: 'ai-tuner-parts-v1',
+    vehicle_id: vehicleId,
+    car_name: carData.car_name || '',
+    parts: carData.parts || {},
+    exported_at: new Date().toISOString(),
+  };
+
+  fs.writeFileSync(result.filePath, JSON.stringify(exportData, null, 2), 'utf-8');
+  return { success: true, path: result.filePath };
+});
+
+ipcMain.handle('import-parts', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import Parts',
+    filters: [{ name: 'JSON Parts File', extensions: ['json'] }],
+    properties: ['openFile'],
+  });
+
+  if (result.canceled || !result.filePaths.length) {
+    return { success: false, canceled: true };
+  }
+
+  try {
+    const raw = fs.readFileSync(result.filePaths[0], 'utf-8');
+    const data = JSON.parse(raw);
+
+    if (!data.parts || typeof data.parts !== 'object') {
+      return { success: false, error: 'Invalid parts file: missing "parts" object' };
+    }
+
+    // Save parts to current vehicle
+    if (currentVehicleId) {
+      sendToBackend('UPDATE_CAR_MEMORY', {
+        vehicle_id: currentVehicleId,
+        updates: { parts: data.parts },
+      });
+    }
+
+    return { success: true, parts: data.parts };
   } catch (e) {
     return { success: false, error: `Failed to parse file: ${e.message}` };
   }

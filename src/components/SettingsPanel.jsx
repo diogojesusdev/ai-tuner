@@ -59,11 +59,14 @@ function TokenUsageDisplay() {
         if (data) setUsage(data);
       });
     }
+    let wrappedHandler = null;
     if (window.pitwall?.onTokenUsage) {
-      window.pitwall.onTokenUsage((data) => setUsage(data));
+      wrappedHandler = window.pitwall.onTokenUsage((data) => setUsage(data));
     }
     return () => {
-      if (window.pitwall) window.pitwall.removeAllListeners('token-usage');
+      if (wrappedHandler && window.pitwall?.removeListener) {
+        window.pitwall.removeListener('token-usage', wrappedHandler);
+      }
     };
   }, []);
 

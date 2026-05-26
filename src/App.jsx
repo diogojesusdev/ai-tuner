@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import TelemetryHUD from './components/TelemetryHUD';
 import ChatWindow from './components/ChatWindow';
 import TuneSheet from './components/TuneSheet';
+import PartsSheet from './components/PartsSheet';
 import SettingsPanel from './components/SettingsPanel';
-import { Settings, GripVertical, MessageCircle, Wrench, X, Square, History, Plus, Trash2 } from 'lucide-react';
+import { Settings, GripVertical, MessageCircle, Wrench, X, Square, History, Plus, Trash2, Cog } from 'lucide-react';
 
 const STATE_LABELS = {
   IDLE: { text: 'Idle', color: 'text-gray-500' },
@@ -58,7 +59,7 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'tune' | 'sessions'
+  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'tune' | 'parts' | 'sessions'
   const [vehicleId, setVehicleId] = useState(null);
   const [agentState, setAgentState] = useState('IDLE');
   const [carName, setCarName] = useState(null);
@@ -142,6 +143,7 @@ function App() {
       carName: name || null,
       vehicleId: vehId || null,
       messages: [],
+      tokens: { input: 0, output: 0 },
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -149,7 +151,7 @@ function App() {
     if (activeSessionId && messages.length > 0) {
       setSessions((prev) => prev.map((s) =>
         s.id === activeSessionId
-          ? { ...s, messages, carName: carName || s.carName, updatedAt: Date.now() }
+          ? { ...s, messages, carName: carName || s.carName, tokens: sessionTokens, updatedAt: Date.now() }
           : s
       ));
     }
@@ -160,8 +162,13 @@ function App() {
     setQuickActions([]);
     setCarName(name || null);
     setVehicleId(vehId || null);
+    setSessionTokens({ input: 0, output: 0 });
+    // Reset backend session token counter
+    if (window.pitwall?.resetSessionTokens) {
+      window.pitwall.resetSessionTokens();
+    }
     return id;
-  }, [activeSessionId, messages, carName]);
+  }, [activeSessionId, messages, carName, sessionTokens]);
 
   const deleteSession = useCallback((sessionId) => {
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
@@ -200,6 +207,7 @@ function App() {
         setMessages(session.messages || []);
         setCarName(session.carName || null);
         setVehicleId(session.vehicleId || null);
+        setSessionTokens(session.tokens || { input: 0, output: 0 });
       }
     }
   }, []); // Only on mount
@@ -438,6 +446,17 @@ function App() {
               Tune
             </button>
             <button
+              onClick={() => setActiveTab('parts')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-b-2 transition-colors ${
+                activeTab === 'parts'
+                  ? 'border-pit-accent text-pit-accent'
+                  : 'border-transparent text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <Cog size={12} />
+              Parts
+            </button>
+            <button
               onClick={() => setActiveTab('sessions')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-b-2 transition-colors ${
                 activeTab === 'sessions'
@@ -486,6 +505,9 @@ function App() {
             )}
             {activeTab === 'tune' && (
               <TuneSheet vehicleId={vehicleId} />
+            )}
+            {activeTab === 'parts' && (
+              <PartsSheet vehicleId={vehicleId} />
             )}
             {activeTab === 'sessions' && (
               <div className="h-full flex flex-col">
