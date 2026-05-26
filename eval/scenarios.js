@@ -536,6 +536,313 @@ const SCENARIOS = [
       },
     ],
   },
+
+  // ─────────────────────────────────────────────────
+  // SCENARIO 13: Racing — Mid-corner oversteer (RWD)
+  // ─────────────────────────────────────────────────
+  {
+    id: 'racing-mid-corner-oversteer',
+    name: 'Racing: Mid-corner oversteer on throttle (RWD C7 Corvette)',
+    description: 'Driver has a high-HP RWD Corvette for racing. Rear steps out when applying throttle mid-corner. Telemetry confirms rear slip spikes on throttle application. Should suggest lowering diff accel lock, softening rear ARB, or lowering rear tire pressure. Should NOT stiffen rear (more rear grip loss) or touch front aero.',
+    expectedFixes: ['reduce diff accel', 'soften rear ARB', 'lower rear tire pressure'],
+    wrongFixes: ['stiffen rear ARB', 'stiffen rear springs', 'increase diff accel'],
+    turns: [
+      {
+        context: {
+          current_state: 'READY',
+          vehicle_id: 4100,
+          car_memory: {
+            car_name: 'Chevrolet Corvette C7 Z06',
+            discipline: 'Racing',
+            hp_tier: null,
+            tune: {
+              diff_accel: '70',
+              diff_decel: '25',
+              arb_front: '42',
+              arb_rear: '40',
+              tire_pressure_fl: '2.1',
+              tire_pressure_fr: '2.1',
+              tire_pressure_rl: '2.1',
+              tire_pressure_rr: '2.1',
+              aero_front: '80',
+              aero_rear: '120',
+            },
+            parts: { drivetrain_layout: 'RWD', tire_compound: 'Semi-Slick', aspiration: 'Supercharger' },
+            past_modifications: [],
+          },
+          telemetry_summary: {
+            avg_speed_kmh: 155,
+            avg_front_slip_angle_deg: 3.5,
+            avg_rear_slip_angle_deg: 7.2,
+            peak_rear_slip_ratio: 0.85,
+            avg_rear_slip_ratio: 0.32,
+            avg_front_slip_ratio: 0.08,
+            peak_lateral_g: 1.25,
+            time_full_throttle_pct: 58,
+            balance_indicator: 'oversteer',
+            suspension_front_left: { avg: 0.40, max: 0.65, pct_bottoming_out: 0 },
+            suspension_rear_left: { avg: 0.48, max: 0.75, pct_bottoming_out: 0 },
+            peak_power_hp: 720,
+            peak_torque_nm: 880,
+          },
+        },
+        userMessage: "Every time I get on the throttle mid-corner the rear kicks out and I have to catch a slide. It's costing me a lot of time. I want the car to be more stable on power.",
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────
+  // SCENARIO 14: Racing — High-speed instability / twitchy
+  // ─────────────────────────────────────────────────
+  {
+    id: 'racing-high-speed-instability',
+    name: 'Racing: High-speed instability / twitchy at 250+ km/h (Lambo)',
+    description: 'Driver has a high-HP AWD Lambo for racing. Car is twitchy and unstable at very high speed straights and fast sweepers. Should suggest increasing rear downforce, softening rear ARB, or adding rear toe-in for stability. Should NOT suggest removing downforce or changing tire pressure much.',
+    expectedFixes: ['increase rear downforce', 'add rear toe-in', 'soften rear ARB'],
+    wrongFixes: ['reduce downforce', 'stiffen rear ARB', 'lower ride height aggressively'],
+    turns: [
+      {
+        context: {
+          current_state: 'READY',
+          vehicle_id: 4200,
+          car_memory: {
+            car_name: 'Lamborghini Huracan Performante',
+            discipline: 'Racing',
+            hp_tier: null,
+            tune: {
+              aero_front: '100',
+              aero_rear: '90',
+              arb_front: '45',
+              arb_rear: '45',
+              toe_rl: '0.0',
+              toe_rr: '0.0',
+              tire_pressure_fl: '2.2',
+              tire_pressure_fr: '2.2',
+              tire_pressure_rl: '2.1',
+              tire_pressure_rr: '2.1',
+            },
+            parts: { drivetrain_layout: 'AWD', tire_compound: 'Slick', rear_aero: 'Forza Aero', front_aero: 'Forza Aero' },
+            past_modifications: [],
+          },
+          telemetry_summary: {
+            avg_speed_kmh: 235,
+            avg_front_slip_angle_deg: 2.1,
+            avg_rear_slip_angle_deg: 4.8,
+            peak_rear_slip_ratio: 0.42,
+            peak_lateral_g: 1.4,
+            avg_steering_magnitude: 0.18,
+            suspension_front_left: { avg: 0.35, max: 0.52, pct_bottoming_out: 0 },
+            suspension_rear_left: { avg: 0.42, max: 0.60, pct_bottoming_out: 0 },
+            peak_power_hp: 680,
+            peak_torque_nm: 620,
+          },
+        },
+        userMessage: "On the long straights and fast sweepers the car feels super twitchy. Even tiny steering inputs make it dart sideways. It feels dangerous above 250 km/h.",
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────
+  // SCENARIO 15: Street Racing — Traction off the line
+  // ─────────────────────────────────────────────────
+  {
+    id: 'street-traction-launch',
+    name: 'Street Racing: No traction off the line (RWD Charger)',
+    description: 'Driver is doing street racing / rolling races with a high-HP RWD muscle car. Massive wheelspin off the line and can\'t put power down out of slow corners. Should suggest lowering diff accel lock, lowering rear tire pressure for more grip, or softer rear springs to improve weight transfer. Should NOT suggest adding downforce (street build) or stiffening anything.',
+    expectedFixes: ['reduce diff accel', 'lower rear tire pressure', 'softer rear springs'],
+    wrongFixes: ['add downforce', 'stiffen rear', 'increase diff accel'],
+    turns: [
+      {
+        context: {
+          current_state: 'READY',
+          vehicle_id: 4300,
+          car_memory: {
+            car_name: 'Dodge Charger R/T',
+            discipline: 'Racing',
+            hp_tier: null,
+            tune: {
+              diff_accel: '80',
+              diff_decel: '20',
+              tire_pressure_rl: '2.4',
+              tire_pressure_rr: '2.4',
+              tire_pressure_fl: '2.2',
+              tire_pressure_fr: '2.2',
+              spring_front: '95.0',
+              spring_rear: '100.0',
+            },
+            parts: { drivetrain_layout: 'RWD', tire_compound: 'Sport', aspiration: 'Supercharger', transmission: 'Race' },
+            past_modifications: [],
+          },
+          telemetry_summary: {
+            avg_speed_kmh: 88,
+            avg_rear_slip_angle_deg: 3.5,
+            peak_rear_slip_ratio: 2.8,
+            avg_rear_slip_ratio: 0.95,
+            avg_front_slip_ratio: 0.04,
+            peak_lateral_g: 0.65,
+            time_full_throttle_pct: 72,
+            suspension_front_left: { avg: 0.35, max: 0.55, pct_bottoming_out: 0 },
+            suspension_rear_left: { avg: 0.62, max: 0.88, pct_bottoming_out: 3 },
+            peak_power_hp: 850,
+            peak_torque_nm: 1100,
+          },
+        },
+        userMessage: "I'm doing street races and every time I launch or floor it out of a corner the rear just lights up. Massive wheelspin, I'm just burning rubber and going nowhere. How do I put the power down?",
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────
+  // SCENARIO 16: Racing — Braking instability / rear locks
+  // ─────────────────────────────────────────────────
+  {
+    id: 'racing-braking-instability',
+    name: 'Racing: Rear locks up under heavy braking (FWD Civic)',
+    description: 'Driver has a FWD Civic for racing. Under heavy braking the rear locks up and the car rotates. Telemetry shows rear slip ratio spikes under braking. The primary fix is adjusting brake balance more toward front. Could also suggest increasing rear tire pressure slightly or reducing brake pressure. Should NOT suggest diff or ARB changes as primary fix.',
+    expectedFixes: ['move brake balance toward front', 'reduce brake pressure', 'increase rear tire pressure slightly'],
+    wrongFixes: ['diff changes', 'ARB changes as primary', 'add rear downforce'],
+    turns: [
+      {
+        context: {
+          current_state: 'READY',
+          vehicle_id: 4400,
+          car_memory: {
+            car_name: 'Honda Civic Type R FK8',
+            discipline: 'Racing',
+            hp_tier: null,
+            tune: {
+              brake_balance: '52',
+              brake_pressure: '95',
+              tire_pressure_fl: '2.3',
+              tire_pressure_fr: '2.3',
+              tire_pressure_rl: '2.2',
+              tire_pressure_rr: '2.2',
+              arb_front: '38',
+              arb_rear: '35',
+            },
+            parts: { drivetrain_layout: 'FWD', tire_compound: 'Semi-Slick', brakes_type: 'Race' },
+            past_modifications: [],
+          },
+          telemetry_summary: {
+            avg_speed_kmh: 130,
+            avg_front_slip_angle_deg: 3.0,
+            avg_rear_slip_angle_deg: 8.5,
+            peak_rear_slip_ratio: 0.95,
+            avg_rear_slip_ratio: 0.45,
+            avg_front_slip_ratio: 0.22,
+            peak_lateral_g: 1.1,
+            time_full_throttle_pct: 55,
+            balance_indicator: 'oversteer_on_braking',
+            suspension_front_left: { avg: 0.55, max: 0.78, pct_bottoming_out: 0 },
+            suspension_rear_left: { avg: 0.30, max: 0.50, pct_bottoming_out: 0 },
+            peak_power_hp: 340,
+            peak_torque_nm: 400,
+          },
+        },
+        userMessage: "The car is really unstable under braking. When I brake hard for corners the rear end swings around and I nearly spin. It feels like the back wheels are locking up before the fronts.",
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────
+  // SCENARIO 17: Drift — Bogging down / no power mid-drift
+  // ─────────────────────────────────────────────────
+  {
+    id: 'drift-bogging-down',
+    name: 'Drift: Car bogs down mid-drift, runs out of revs (low HP AE86)',
+    description: 'Driver has a low-HP drift car that bogs down mid-drift — the engine drops out of the powerband and the drift dies. Telemetry shows low RPM during slides. Should suggest adjusting final drive (shorter gearing), or suggest the user check if they need a gear ratio tune. Could also suggest lowering diff decel so engine doesn\'t brake as hard on transitions. Should NOT suggest tire pressure or ARBs as primary fix.',
+    expectedFixes: ['shorter final drive', 'lower gear ratios', 'reduce diff decel'],
+    wrongFixes: ['tire pressure', 'ARB changes', 'spring changes'],
+    turns: [
+      {
+        context: {
+          current_state: 'READY',
+          vehicle_id: 4500,
+          car_memory: {
+            car_name: 'Toyota AE86 Trueno',
+            discipline: 'Drifting',
+            hp_tier: 'Low HP',
+            tune: {
+              diff_accel: '75',
+              diff_decel: '35',
+              final_drive: '3.70',
+              tire_pressure_rl: '2.3',
+              tire_pressure_rr: '2.3',
+              arb_rear: '28',
+            },
+            parts: { drivetrain_layout: 'RWD', aspiration: 'Turbo', transmission: 'Race' },
+            past_modifications: [],
+          },
+          telemetry_summary: {
+            avg_speed_kmh: 58,
+            avg_rear_slip_angle_deg: 18,
+            avg_front_slip_angle_deg: 7,
+            peak_rear_slip_ratio: 0.8,
+            avg_rear_slip_ratio: 0.35,
+            avg_engine_rpm: 3800,
+            peak_engine_rpm: 5200,
+            redline_rpm: 8500,
+            time_below_4000_rpm_pct: 62,
+            peak_power_hp: 310,
+            peak_torque_nm: 350,
+          },
+        },
+        userMessage: "When I'm mid-drift the engine just dies. Like it drops RPM and I can feel it bogging down, then the drift fades because there's no power. I'm in 3rd gear and it's just falling flat.",
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────
+  // SCENARIO 18: Drift — Rear suspension bottoming out
+  // ─────────────────────────────────────────────────
+  {
+    id: 'drift-suspension-bottoming',
+    name: 'Drift: Rear suspension bottoming out during slides (Silvia)',
+    description: 'Driver has a drift Silvia where the rear suspension compresses fully during aggressive drifts, causing sudden grip changes and unpredictable snaps. Telemetry clearly shows rear bottoming out. Should suggest stiffening rear springs, raising rear ride height, or increasing rear bump damping. Should NOT suggest tire pressure or diff as primary fix.',
+    expectedFixes: ['stiffen rear springs', 'raise rear ride height', 'increase rear bump damping'],
+    wrongFixes: ['tire pressure changes', 'diff changes', 'ARB as primary fix'],
+    turns: [
+      {
+        context: {
+          current_state: 'READY',
+          vehicle_id: 4600,
+          car_memory: {
+            car_name: 'Nissan Silvia S15 Spec-R',
+            discipline: 'Drifting',
+            hp_tier: 'High HP',
+            tune: {
+              spring_front: '70.0',
+              spring_rear: '65.0',
+              ride_height_front: '12.0',
+              ride_height_rear: '12.5',
+              bump_front: '7.0',
+              bump_rear: '6.5',
+              rebound_front: '5.5',
+              rebound_rear: '5.0',
+              diff_accel: '80',
+              diff_decel: '25',
+            },
+            parts: { drivetrain_layout: 'RWD', springs_type: 'Race', aspiration: 'Twin Turbo' },
+            past_modifications: [],
+          },
+          telemetry_summary: {
+            avg_speed_kmh: 82,
+            avg_rear_slip_angle_deg: 28,
+            peak_rear_slip_ratio: 1.7,
+            avg_rear_slip_ratio: 0.75,
+            peak_lateral_g: 0.92,
+            suspension_front_left: { avg: 0.45, max: 0.70, pct_bottoming_out: 0 },
+            suspension_front_right: { avg: 0.43, max: 0.68, pct_bottoming_out: 0 },
+            suspension_rear_left: { avg: 0.78, max: 1.0, pct_bottoming_out: 35 },
+            suspension_rear_right: { avg: 0.75, max: 1.0, pct_bottoming_out: 28 },
+            peak_power_hp: 720,
+            peak_torque_nm: 810,
+          },
+        },
+        userMessage: "The car feels really unpredictable when I'm deep into a drift. Sometimes it suddenly snaps or grips up out of nowhere. I feel like the suspension is hitting the bump stops hard.",
+      },
+    ],
+  },
 ];
 
 module.exports = { SCENARIOS };
